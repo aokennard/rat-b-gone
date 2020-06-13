@@ -7,7 +7,7 @@
 
 #define min(%1,%2) (((%1) < (%2)) ? (%1) : (%2))
 
-#define PLUGIN_VERSION "1.5.0"
+#define PLUGIN_VERSION "1.5.1"
 
 // barbancle
 #define HOME_TEAM_ID 6602
@@ -210,7 +210,6 @@ public void GetETF2LUserByID(const String:steamID[], int client) {
 	char etf2lGetDataCommand[256];
 	char smPath[256];
 	GetSMPath(smPath, sizeof(smPath));
-	// /home/tf2server/hlserver/hlserver/tf/addons/sourcemod/plugins/
 	Format(etf2lGetDataCommand, 256, "python3 %s/etf2lplayerdata.py %s", smPath, steamID);
 	PrintToServer("ETF2L cmd: %s", etf2lGetDataCommand);
 	
