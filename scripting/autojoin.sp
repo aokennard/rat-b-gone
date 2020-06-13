@@ -7,7 +7,7 @@
 
 #define min(%1,%2) (((%1) < (%2)) ? (%1) : (%2))
 
-#define PLUGIN_VERSION "1.2.1"
+#define PLUGIN_VERSION "1.5.0"
 
 // barbancle
 #define HOME_TEAM_ID 6602
@@ -211,8 +211,6 @@ public void GetETF2LUserByID(const String:steamID[], int client) {
 	System2_ExecuteThreaded(ETF2LGetPlayerDataCallback, cmd, client);
 }
 
-
-
 public void RGLGetPlayerDataCallback(bool success, const char[] command, System2ExecuteOutput output, any data) {
 	int client = data;
 	
@@ -240,8 +238,6 @@ public void GetRGLUserByID(const String:steamID[], int client) {
 
 	System2_ExecuteThreaded(RGLGetPlayerDataCallback, cmd, client);
 }
-
-
 
 public void OnClientAuthorized(int client, const char[] auth)
 {

@@ -7,7 +7,8 @@ import shutil
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-RGL_SEARCH_URL = "https://rgl.gg/public/playersearch.aspx?r=40"
+RGL_SEARCH_LEAGUE_TABLE = {"6v6" : "40", "7v7" : "1", "6v6NR" : "37", "9v9" : "24"}
+RGL_SEARCH_URL = "https://rgl.gg/public/playersearch.aspx?r="
 INPUT_ID_STRING = "txtSearchPlayer"
 INPUT_BUTTON_ID_STRING = "btnSearchPlayer"
 NOT_FOUND_ELEM_ID = "ContentPlaceHolder1_lblMessage"
@@ -58,7 +59,7 @@ if __name__ == "__main__":
     
     chromedriver_path = shutil.which('chromedriver')
     driver = webdriver.Chrome(executable_path=chromedriver_path, chrome_options=cr_options, service_args=['--verbose', '--log-path=/tmp/chromedriver.log'])
-    driver.get(RGL_SEARCH_URL)
+    driver.get(RGL_SEARCH_URL + RGL_SEARCH_LEAGUE_TABLE["6v6"])
 
     # locate the place to put ID
 
@@ -81,10 +82,6 @@ if __name__ == "__main__":
         print("No player with id found")
         exit(-1)
     else:
-        # if we want 6s only - load page of team, look for id of ContentPlaceHolder1_Main_hlDivision, get href=LeagueTable.aspx?g=<x>, where x determines league
-        # 396 = prolander, 431 hl, 405 reg 6s, 389 NR 6s
-
-
         # parsing to find relevant info - name, team, division
         tbody_data = driver.find_element_by_xpath('//tbody[.//tr[.//th[text()="Name"]]]')
         cols = tbody_data.find_elements(By.TAG_NAME, "tr")[1].find_elements(By.TAG_NAME, "td")
