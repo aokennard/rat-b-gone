@@ -20,8 +20,8 @@ Put ChromeDriver in your PATH so that `which` can recognize your installation.
 You need [Metamod](http://wiki.alliedmods.net/Installing_Metamod:Source) and [SourceMod](http://wiki.alliedmods.net/Installing_SourceMod) installed first for this plugin to work.  
 Additionally, this uses [System2](https://github.com/dordnung/System2) as a dependency, so you also need that.
 
-Download this repo and extract to your addons/sourcemod folder. I assume you have the SourcePawn compiler (`./spcomp`) in sourcemod/scripting.
-Define environment variable SOURCEMOD_ROOT at the root of your SourceMod directory, `addons/sourcemod`. `export SOURCEMOD_ROOT=\`pwd` works if you are currently in the directory. You may want to save it in a file that gets sourced like ~/.bashrc.  
+Download this repo and extract to your addons/sourcemod folder. I assume you have the SourcePawn compiler (`./spcomp`) in sourcemod/scripting.  
+Define environment variable SOURCEMOD_ROOT at the root of your SourceMod directory, `addons/sourcemod`. `export SOURCEMOD_ROOT=```pwd``` works if you are currently in the directory. You may want to save it in a file that gets sourced like ~/.bashrc.  
 Finally, `make` in order to build the plugin.
 
 ## Usage
