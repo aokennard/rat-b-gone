@@ -203,14 +203,13 @@ public void ETF2LGetPlayerDataCallback(bool success, const char[] command, Syste
 }
 
 public void GetSMPath(char[] path, int maxLength) {
-	System2_Execute(path, maxLength, "echo $SOURCEMOD_ROOT");
+	System2_Execute(path, maxLength, "echo -n $SOURCEMOD_ROOT");
 }
 
 public void GetETF2LUserByID(const String:steamID[], int client) {
 	char etf2lGetDataCommand[256];
 	char smPath[256];
 	GetSMPath(smPath, sizeof(smPath));
-	// /home/tf2server/hlserver/hlserver/tf/addons/sourcemod/plugins/
 	Format(etf2lGetDataCommand, 256, "python3 %s/etf2lplayerdata.py %s", smPath, steamID);
 	PrintToServer("ETF2L cmd: %s", etf2lGetDataCommand);
 	
