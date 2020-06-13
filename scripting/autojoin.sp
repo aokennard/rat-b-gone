@@ -140,22 +140,22 @@ public void RGLGetPlayerDataCallback(bool success, const char[] command, System2
 			}
 			KickClient(client, "You aren't currently in the team whitelist");
 			return;
-    		}
+		}
 
-    		if (RGL_MODE_ALL & GetConVarInt(g_rglMode)) {
+		if (RGL_MODE_ALL & GetConVarInt(g_rglMode)) {
 			PrintToChatAll("Player %s (RGL div: %s) joined the server", div_name_teamid[1], div_name_teamid[0]);
 			return;
-    		}
+		}
 
-    		if (RGL_SCRIM & GetConVarInt(g_rglMode) && StringToInt(div_name_teamid[2]) == GetConVarInt(g_scrimID)) {
+		if (RGL_SCRIM & GetConVarInt(g_rglMode) && StringToInt(div_name_teamid[2]) == GetConVarInt(g_scrimID)) {
 			PrintToChatAll("Player %s (RGL div: %s) joined the server", div_name_teamid[1], div_name_teamid[0]);
 			return;
-    		}
+		}
 
-    		if (RGL_MATCH & GetConVarInt(g_rglMode) && StringToInt(div_name_teamid[2]) == GetConVarInt(g_matchID)) {
+		if (RGL_MATCH & GetConVarInt(g_rglMode) && StringToInt(div_name_teamid[2]) == GetConVarInt(g_matchID)) {
 			PrintToChatAll("Player %s (RGL div: %s) joined the server", div_name_teamid[1], div_name_teamid[0]);
 			return;
-    		}
+		}
 
 		// old heuristic for Ringers / Specs
 		/*
@@ -176,7 +176,10 @@ public void RGLGetPlayerDataCallback(bool success, const char[] command, System2
 
 public void GetRGLUserByID(const String:steamID[], int client) {
 	char cmd[256];
-	Format(cmd, 256, "python3 /home/tf2server/hlserver/hlserver/tf/addons/sourcemod/plugins/rglplayerdata.py %s", steamID);
+	// assume we are in sourcemod/scripting
+	char plugin_path[1024];
+	Format
+	Format(cmd, 256, "python3 rglplayerdata.py %s", steamID);
 	PrintToServer("cmd: %s", cmd);
 
 	System2_ExecuteThreaded(RGLGetPlayerDataCallback, cmd, client);
@@ -184,20 +187,27 @@ public void GetRGLUserByID(const String:steamID[], int client) {
 
 public void OnClientAuthorized(int client, const char[] auth)
 {
+	// TODO more STV testing
+	if (IsClientSourceTV(client)) {
+		return;
+	}
+
 	char steamID[STEAMID_LENGTH];
 	GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
 
+	// Client's password
 	char password[256];
 	GetClientInfo(client, FAKE_PASSWORD_VAR, password, 256);
 	PrintToServer("Inputted 'pass': %s", password);
 
+	// Server controlled password
 	char fakepw_buf[256];
 	GetConVarString(g_ringerPassword, fakepw_buf, 256);
 
 	if (strlen(password) > 0) {
 		int pw_len = strlen(password);
 		int fakepw_len = strlen(fakepw_buf);
-		int min_len = min(pw_len, fakepw_len);
+		int min_len = min(pw_len, fakepw_len); // don't have gcc's typeof good min macro here, so we do this
 		if (strncmp(password, fakepw_buf, min_len, false) == 0) {
 			PrintToServer("Joined via password");
 			return;
@@ -213,12 +223,10 @@ public void OnClientAuthorized(int client, const char[] auth)
 	GetRGLUserByID(steamID, client); 
 }
 
-// TODO http://sourcemod.net/new-api/clients/IsClientSourceTV
-// Need to test if STV works with this
-
+/* 
 public OnClientDisconnect(int client) {
 	
-	/* Old ringer / spec verification on leaving
+	Old ringer / spec verification on leaving
 	if (GetConVarInt(g_useWhitelist) == 0) {
         return;
     }
@@ -236,5 +244,6 @@ public OnClientDisconnect(int client) {
 			break;
 		}
 	}
-	*/
+	
 }
+*/
