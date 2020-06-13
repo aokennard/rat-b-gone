@@ -6,13 +6,14 @@ import requests
 
 current_sid = 0
 
-ETF2L_PLAYER_API_URL = "http://api.etf2l.org/player/"
+ETF2L_PLAYER_API_URL = "http://api.etf2l.org/player/{}.json"
+ETF2L_TEAM_MATCHES_API_URL = "https://api.etf2l.org/team/{}/matches.json"
 
 if __name__ == "__main__":
     # we spawned this process - we gave it this argument guaranteed
     steamid = sys.argv[1]
 
-    resp = requests.get(ETF2L_PLAYER_API_URL + steamid + ".json")
+    resp = requests.get(ETF2L_PLAYER_API_URL.format(steamid))
 
     resp_json = json.loads(resp.text)
 
@@ -33,6 +34,13 @@ if __name__ == "__main__":
 
     if sixes_team is None:
         print("No 6s team")
+        exit(-1)
+
+    # This is if we want to only check active ones
+    matches_json = requests.get(ETF2L_TEAM_MATCHES_API_URL.format(sixes_team["id"])).text
+
+    if matches_json["matches"] is None:
+        print("No active sixes team")
         exit(-1)
 
     teamid = sixes_team["id"]
