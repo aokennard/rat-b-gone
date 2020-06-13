@@ -7,7 +7,7 @@
 
 #define min(%1,%2) (((%1) < (%2)) ? (%1) : (%2))
 
-#define PLUGIN_VERSION "1.5.0"
+#define PLUGIN_VERSION "1.5.1"
 
 // barbancle
 #define HOME_TEAM_ID 6602
