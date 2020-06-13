@@ -122,8 +122,6 @@ public int ETF2LDivisionToInt(char tier[64]) {
 	return -1;
 }
 
-
-
 public int RGLDivisionToInt(char div[64]) {
 	if (strncmp(div, "Invite", 6, false) == 0)
 		return 0x1;
@@ -204,11 +202,19 @@ public void ETF2LGetPlayerDataCallback(bool success, const char[] command, Syste
 	}
 }
 
+public void GetSMPath(char[] path, int maxLength) {
+	System2_Execute(path, maxLength, "echo $SOURCEMOD_ROOT");
+}
+
 public void GetETF2LUserByID(const String:steamID[], int client) {
-	char cmd[256];
-	Format(cmd, 256, "python3 /home/tf2server/hlserver/hlserver/tf/addons/sourcemod/plugins/etf2lplayerdata.py %s", steamID);
+	char etf2lGetDataCommand[256];
+	char smPath[256];
+	GetSMPath(smPath, sizeof(smPath));
+	// /home/tf2server/hlserver/hlserver/tf/addons/sourcemod/plugins/
+	Format(etf2lGetDataCommand, 256, "python3 %s/etf2lplayerdata.py %s", smPath, steamID);
+	PrintToServer("ETF2L cmd: %s", etf2lGetDataCommand);
 	
-	System2_ExecuteThreaded(ETF2LGetPlayerDataCallback, cmd, client);
+	System2_ExecuteThreaded(ETF2LGetPlayerDataCallback, etf2lGetDataCommand, client);
 }
 
 public void RGLGetPlayerDataCallback(bool success, const char[] command, System2ExecuteOutput output, any data) {
@@ -232,11 +238,13 @@ public void RGLGetPlayerDataCallback(bool success, const char[] command, System2
 }
 
 public void GetRGLUserByID(const String:steamID[], int client) {
-	char cmd[256];
-	Format(cmd, 256, "python3  /home/tf2server/hlserver/hlserver/tf/addons/sourcemod/plugins/rglplayerdata.py %s", steamID);
-	PrintToServer("cmd: %s", cmd);
+	char rglGetDataCommand[256];
+	char smPath[256];
+	GetSMPath(smPath, sizeof(smPath));
+	Format(rglGetDataCommand, 256, "python3 %s/rglplayerdata.py %s", smPath, steamID);
+	PrintToServer("RGL cmd: %s", rglGetDataCommand);
 
-	System2_ExecuteThreaded(RGLGetPlayerDataCallback, cmd, client);
+	System2_ExecuteThreaded(RGLGetPlayerDataCallback, rglGetDataCommand, client);
 }
 
 public void OnClientAuthorized(int client, const char[] auth)
