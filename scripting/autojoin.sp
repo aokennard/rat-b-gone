@@ -176,9 +176,6 @@ public void RGLGetPlayerDataCallback(bool success, const char[] command, System2
 
 public void GetRGLUserByID(const String:steamID[], int client) {
 	char cmd[256];
-	// assume we are in sourcemod/scripting
-	char plugin_path[1024];
-	Format
 	Format(cmd, 256, "python3 rglplayerdata.py %s", steamID);
 	PrintToServer("cmd: %s", cmd);
 
