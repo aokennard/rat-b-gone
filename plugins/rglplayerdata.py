@@ -81,6 +81,10 @@ if __name__ == "__main__":
         print("No player with id found")
         exit(-1)
     else:
+        # if we want 6s only - load page of team, look for id of ContentPlaceHolder1_Main_hlDivision, get href=LeagueTable.aspx?g=<x>, where x determines league
+        # 396 = prolander, 431 hl, 405 reg 6s, 389 NR 6s
+
+
         # parsing to find relevant info - name, team, division
         tbody_data = driver.find_element_by_xpath('//tbody[.//tr[.//th[text()="Name"]]]')
         cols = tbody_data.find_elements(By.TAG_NAME, "tr")[1].find_elements(By.TAG_NAME, "td")
