@@ -45,6 +45,7 @@
 
 ConVar g_useWhitelist;
 ConVar g_rglDivsAllowed;
+ConVar g_etf2lDivsAllowed;
 ConVar g_serverMode;
 ConVar g_teamID;
 ConVar g_scrimID;
@@ -78,7 +79,7 @@ public OnPluginStart()
 	IntToString(ETF2L_DIV_ALL, macro_int_buf, 64);
 	g_etf2lDivsAllowed = CreateConVar("plw_divs_etf2l", macro_int_buf, "Allowed division players (or operator): 1 = prem, 2 = div1, 4 = div2, 8 = div3, 16 = div4");
 
-	IntToString(RGL_MODE_ALL, macro_int_buf, 64);
+	IntToString(MODE_ALL, macro_int_buf, 64);
 	g_serverMode = CreateConVar("plw_mode", macro_int_buf, "Determines who can join - 0 = only team, 1 = team + scrim, 2 = team + match, 3 = team + scrim + match, 4 = all");
 
 	IntToString(HOME_TEAM_ID, macro_int_buf, 64);
@@ -102,7 +103,7 @@ public void PrintETF2LJoinString(const char[] name, const char[] division) {
 }
 
 public void PrintRGLJoinString(const char[] name, const char[] division) {
-	PrintToChatAll("Player %s (RGL div: %s) joined the server", divisionNameTeamID[1], divisionNameTeamID[0]);
+	PrintToChatAll("Player %s (RGL div: %s) joined the server", name, division);
 }
 
 public int ETF2LDivisionToInt(char tier[64]) {
@@ -117,8 +118,6 @@ public int ETF2LDivisionToInt(char tier[64]) {
 			return ETF2L_DIV_3;
 		case '4':
 			return ETF2L_DIV_4;
-		default:
-			break;
 	}
 	return -1;
 }
@@ -143,14 +142,14 @@ public int RGLDivisionToInt(char div[64]) {
 	return 0x0;
 }
 
-public void LeagueSuccessHelper(System2ExecuteOutput output, int league) {
+public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int league) {
 	char pyOutData[256];
 	char divisionNameTeamID[3][64]; // (div, rgl_name, team id)
 	output.GetOutput(pyOutData, 256);
 	ExplodeString(pyOutData, ",", divisionNameTeamID, 3, 64);
 
 	PrintToServer("div: %s name: %s teamid: %s", divisionNameTeamID[0], divisionNameTeamID[1], divisionNameTeamID[2]);
-	int div = (league == LEAGUE_RGL ? RGLDivisionToInt : ETF2LDivisionToInt)(divisionNameTeamID[0]); // allowed?
+	int div = (league == LEAGUE_RGL ? RGLDivisionToInt(divisionNameTeamID[0]) : ETF2LDivisionToInt(divisionNameTeamID[0]));
 	if (div == -1) {
 		// investigate
 		PrintToServer("Unexpected ETF2L tier, check up on it");
@@ -163,7 +162,7 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int league) {
 
 	if (MODE_TEAMONLY & GetConVarInt(g_serverMode)) {
 		if (StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_teamID)) {
-   				(league == LEAGUE_RGL ? PrintRGLJoinString : PrintETF2LJoinString)(divisionNameTeamID[1], divisionNameTeamID[0]);
+   				(league == LEAGUE_RGL ? PrintRGLJoinString(divisionNameTeamID[1], divisionNameTeamID[0]) : PrintETF2LJoinString(divisionNameTeamID[1], divisionNameTeamID[0]));
 				return;
 		}
 		KickClient(client, "You aren't currently in the team whitelist");
@@ -171,17 +170,17 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int league) {
 	}
 
 	if (MODE_ALL & GetConVarInt(g_serverMode)) {
-		(league == LEAGUE_RGL ? PrintRGLJoinString : PrintETF2LJoinString)(divisionNameTeamID[1], divisionNameTeamID[0]);
+		(league == LEAGUE_RGL ? PrintRGLJoinString(divisionNameTeamID[1], divisionNameTeamID[0]) : PrintETF2LJoinString(divisionNameTeamID[1], divisionNameTeamID[0]));
 		return;
 	}
 
 	if (MODE_SCRIM & GetConVarInt(g_serverMode) && StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_scrimID)) {
-		(league == LEAGUE_RGL ? PrintRGLJoinString : PrintETF2LJoinString)(divisionNameTeamID[1], divisionNameTeamID[0]);
+		(league == LEAGUE_RGL ? PrintRGLJoinString(divisionNameTeamID[1], divisionNameTeamID[0]) : PrintETF2LJoinString(divisionNameTeamID[1], divisionNameTeamID[0]));
 		return;
 	}
 
 	if (MODE_MATCH & GetConVarInt(g_serverMode) && StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_matchID)) {
-		(league == LEAGUE_RGL ? PrintRGLJoinString : PrintETF2LJoinString)(divisionNameTeamID[1], divisionNameTeamID[0]);
+		(league == LEAGUE_RGL ? PrintRGLJoinString(divisionNameTeamID[1], divisionNameTeamID[0]) : PrintETF2LJoinString(divisionNameTeamID[1], divisionNameTeamID[0]));
 		return;
 	}
 
@@ -201,13 +200,13 @@ public void ETF2LGetPlayerDataCallback(bool success, const char[] command, Syste
 			KickClient(client, "You are not an ETF2L player");
 		}
 	} else {
-		LeagueSuccessHelper(output, LEAGUE_ETF2L);
+		LeagueSuccessHelper(output, client, LEAGUE_ETF2L);
 	}
 }
 
-public void GetETF2LUserByID(const String:steamID, int client) {
+public void GetETF2LUserByID(const String:steamID[], int client) {
 	char cmd[256];
-	Format(cmd, 256, "python3 etf2lplayerdata.py %s", steamID);
+	Format(cmd, 256, "python3 /home/tf2server/hlserver/hlserver/tf/addons/sourcemod/plugins/etf2lplayerdata.py %s", steamID);
 	
 	System2_ExecuteThreaded(ETF2LGetPlayerDataCallback, cmd, client);
 }
@@ -229,14 +228,14 @@ public void RGLGetPlayerDataCallback(bool success, const char[] command, System2
 			GetETF2LUserByID(steamID, client);
 		}	
 	} else {
-		LeagueSuccessHelper(output, LEAGUE_RGL);
+		LeagueSuccessHelper(output, client, LEAGUE_RGL);
 	}
 
 }
 
 public void GetRGLUserByID(const String:steamID[], int client) {
 	char cmd[256];
-	Format(cmd, 256, "python3 rglplayerdata.py %s", steamID);
+	Format(cmd, 256, "python3  /home/tf2server/hlserver/hlserver/tf/addons/sourcemod/plugins/rglplayerdata.py %s", steamID);
 	PrintToServer("cmd: %s", cmd);
 
 	System2_ExecuteThreaded(RGLGetPlayerDataCallback, cmd, client);
@@ -260,14 +259,14 @@ public void OnClientAuthorized(int client, const char[] auth)
 	PrintToServer("Inputted 'pass': %s", password);
 
 	// Server controlled password
-	char fakepw_buf[256];
-	GetConVarString(g_ringerPassword, fakepw_buf, 256);
+	char fakePasswordBuf[256];
+	GetConVarString(g_ringerPassword, fakePasswordBuf, 256);
 
 	if (strlen(password) > 0) {
-		int pw_len = strlen(password);
-		int fakepw_len = strlen(fakepw_buf);
-		int min_pw_len = min(pw_len, fakepw_len); // don't have gcc's typeof helper macro here, so we do this
-		if (strncmp(password, fakepw_buf, min_len, false) == 0) {
+		int passwordLen = strlen(password);
+		int fakePasswordLen = strlen(fakePasswordBuf);
+		int minPasswordLen = min(passwordLen, fakePasswordLen); // don't have gcc's typeof helper macro here, so we do this
+		if (strncmp(password, fakePasswordBuf, minPasswordLen, false) == 0) {
 			PrintToServer("Joined via password");
 			return;
 		}
