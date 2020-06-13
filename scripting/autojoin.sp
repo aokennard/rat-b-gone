@@ -6,8 +6,6 @@
 #define REQUIRE_EXTENSIONS
 
 #define min(%1,%2) (((%1) < (%2)) ? (%1) : (%2))
-#define xstr(%1) str(%1)
-#define str(%1) #%1
 
 #define PLUGIN_VERSION "1.0.1"
 
@@ -61,14 +59,19 @@ public Plugin:myinfo = {
 public OnPluginStart()
 {
 	//ringer_spec_index = 0;
-	g_rglDivsAllowed = CreateConVar("plw_divs", xstr(RGL_DIV_ALL), "Allowed division players (or operator): 1 = invite, 2 = div1, 4 = div 2, 8 = main, 16 = intermediate, 32 = amateur, 64 = newcomer");
+	char macro_int_buf[64]; // because stringify doesnt exist apparently
+
+	IntToString(RGL_DIV_ALL, macro_int_buf, 64);
+	g_rglDivsAllowed = CreateConVar("plw_divs", macro_int_buf, "Allowed division players (or operator): 1 = invite, 2 = div1, 4 = div 2, 8 = main, 16 = intermediate, 32 = amateur, 64 = newcomer");
 	
-	g_rglMode = CreateConVar("plw_mode", xstr(RGL_MODE_ALL), "Determines who can join - 0 = only team, 1 = team + scrim, 2 = team + match, 3 = team + scrim + match, 4 = all");
+	IntToString(RGL_MODE_ALL, macro_int_buf, 64);
+	g_rglMode = CreateConVar("plw_mode", macro_int_buf, "Determines who can join - 0 = only team, 1 = team + scrim, 2 = team + match, 3 = team + scrim + match, 4 = all");
 
 	CreateConVar("plw_version", PLUGIN_VERSION, "Auto-kick whitelist");
 	g_useWhitelist = CreateConVar("plw_enable", "1", "Toggles the use of the competitive filter");
 
-	g_teamID = CreateConVar("plw_teamid", xstr(HOME_TEAM_ID), "ID of home team - always allowed");
+	IntToString(HOME_TEAM_ID, macro_int_buf, 64);
+	g_teamID = CreateConVar("plw_teamid", macro_int_buf, "ID of home team - always allowed");
 
 	g_scrimID = CreateConVar("plw_scrimid", "0", "ID of scrim team - sometimes allowed"); 
 	// I could technically scrape these off of RGL website but that sounds awful

@@ -31,19 +31,19 @@ class PageLoadWrapper(object):
     def __init__(self, browser):
         self.browser = browser
 
-        def __enter__(self):
-            self.old_page = self.browser.find_element_by_tag_name('html')
+    def __enter__(self):
+        self.old_page = self.browser.find_element_by_tag_name('html')
 
-        def page_has_loaded(self):
-            new_page = self.browser.find_element_by_tag_name('html')
-            # either there is red text saying theres no player found, or there is new content
-            # TODO make this less awful
-            player_not_found_elem = driver.find_element_by_id(NOT_FOUND_ELEM_ID).get_attribute('style')
-            player_found_elem = driver.find_element_by_xpath('//tbody[.//tr[.//th[text()="Name"]]]')
-            return player_not_found_elem or player_found_elem
+    def page_has_loaded(self):
+        new_page = self.browser.find_element_by_tag_name('html')
+        # either there is red text saying theres no player found, or there is new content
+        # TODO make this less awful
+        player_not_found_elem = driver.find_element_by_id(NOT_FOUND_ELEM_ID).get_attribute('style')
+        player_found_elem = driver.find_element_by_xpath('//tbody[.//tr[.//th[text()="Name"]]]')
+        return player_not_found_elem or player_found_elem
 
-        def __exit__(self, *_):
-            wait_for_condition(self.page_has_loaded)
+    def __exit__(self, *_):
+        wait_for_condition(self.page_has_loaded)
 
 if __name__ == "__main__":
     # we spawned this process - we gave it this argument guaranteed
