@@ -7,7 +7,7 @@
 
 #define min(%1,%2) (((%1) < (%2)) ? (%1) : (%2))
 
-#define PLUGIN_VERSION "1.5.2"
+#include "plugin_version"
 
 // barbancle
 #define HOME_TEAM_ID 6602
@@ -204,6 +204,7 @@ public void ETF2LGetPlayerDataCallback(bool success, const char[] command, Syste
 
 public void GetSMPath(char[] path, int maxLength) {
 	System2_Execute(path, maxLength, "echo -n $SOURCEMOD_ROOT");
+	PrintToServer("%s path", path);
 }
 
 public void GetETF2LUserByID(const String:steamID[], int client) {
