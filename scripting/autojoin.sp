@@ -203,7 +203,7 @@ public void ETF2LGetPlayerDataCallback(bool success, const char[] command, Syste
 }
 
 public void GetSMPath(char[] path, int maxLength) {
-	System2_Execute(path, maxLength, "echo $SOURCEMOD_ROOT");
+	System2_Execute(path, maxLength, "echo -n $SOURCEMOD_ROOT");
 }
 
 public void GetETF2LUserByID(const String:steamID[], int client) {
