@@ -36,7 +36,7 @@ This plugin restricts who can join a server based on a few variables.
 
 ## WIP
 
-Support for specific gamemodes (6s, HL, etc)
-STV verification
-More ETF2L testing
-Support for different webdrivers
+Support for specific gamemodes (6s, HL, etc)  
+STV verification  
+More ETF2L testing  
+Support for different webdrivers  
