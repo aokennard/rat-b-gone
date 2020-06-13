@@ -5,8 +5,9 @@
 #define AUTOLOAD_EXTENSIONS
 #define REQUIRE_EXTENSIONS
 
-#define xstr(s) str(s)
-#define str(s) #s
+#define min(%1,%2) (((%1) < (%2)) ? (%1) : (%2))
+#define xstr(%1) str(%1)
+#define str(%1) #%1
 
 #define PLUGIN_VERSION "1.0.1"
 
@@ -194,7 +195,8 @@ public void OnClientAuthorized(int client, const char[] auth)
 	GetConVarString(g_ringerPassword, fakepw_buf, 256);
 
     if (strlen(password) > 0) {
-		if (strncmp(password, fakepw_buf, min(strlen(fakepw_buf), password), false) == 0) {
+		int pw_len = strlen(fakepw_buf);
+		if (strncmp(password, fakepw_buf, min(pw_len, password), false) == 0) {
 			PrintToServer("Joined via password");
 			return;
 		}
