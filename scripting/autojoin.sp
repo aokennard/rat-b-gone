@@ -66,7 +66,7 @@ public OnPluginStart()
 	g_rglMode = CreateConVar("plw_mode", xstr(RGL_MODE_ALL), "Determines who can join - 0 = only team, 1 = team + scrim, 2 = team + match, 3 = team + scrim + match, 4 = all");
 
 	CreateConVar("plw_version", PLUGIN_VERSION, "Auto-kick whitelist");
-    g_useWhitelist = CreateConVar("plw_enable", "1", "Toggles the use of the competitive filter");
+	g_useWhitelist = CreateConVar("plw_enable", "1", "Toggles the use of the competitive filter");
 
 	g_teamID = CreateConVar("plw_teamid", xstr(HOME_TEAM_ID), "ID of home team - always allowed");
 
@@ -76,7 +76,7 @@ public OnPluginStart()
 
 	//g_otherPlayerCount = CreateConVar("plw_others_count", "3", "Number of 'rule breaker' players allowed - 2 ringer, 1 spec. Set to 0 if no ringers/specs needed");
 
-	g_ringerPassword = CreateConVar("plw_fakepw", DEFAULT_FAKE_PW, "The password that ringers / specs can use to join")
+	g_ringerPassword = CreateConVar("plw_fakepw", DEFAULT_FAKE_PW, "The password that ringers / specs can use to join");
 	
 	PrintToServer("RGL Player Whitelist loaded");
 }
@@ -115,7 +115,7 @@ public void RGLGetPlayerDataCallback(bool success, const char[] command, System2
 	} else {
 		
 		char steamID[STEAMID_LENGTH];
-    	GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
+		GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
 
 		char outdata[256];
 		char div_name_teamid[3][64]; // (div, rgl_name, team id)
@@ -123,52 +123,52 @@ public void RGLGetPlayerDataCallback(bool success, const char[] command, System2
 		ExplodeString(outdata, ",", div_name_teamid, 3, 64);
 
 		PrintToServer("Player %s (RGL div: %s) the server", div_name_teamid[1], div_name_teamid[0]);
-    	int div = DivisionToInt(div_name_teamid[0]);
-    	PrintToServer("div: %s name: %s teamid: %s", div_name_teamid[0], div_name_teamid[1], div_name_teamid[2]);
+		int div = DivisionToInt(div_name_teamid[0]);
+		PrintToServer("div: %s name: %s teamid: %s", div_name_teamid[0], div_name_teamid[1], div_name_teamid[2]);
 
 		// First layer is checking if they are in the allowed divisions to join
-    	if ((div & GetConVarInt(g_rglDivsAllowed)) == 0) {
+		if ((div & GetConVarInt(g_rglDivsAllowed)) == 0) {
 			KickClient(client, "You are not an RGL player in the currently whitelisted divisions");
 			return;
-    	}
+		}
 
 		// Then check if they follow the correct 'server mode' for joining - scrim, match, general, etc
-    	if (RGL_TEAMONLY & GetConVarInt(g_rglMode)) {
+		if (RGL_TEAMONLY & GetConVarInt(g_rglMode)) {
 			if (StringToInt(div_name_teamid[2]) == GetConVarInt(g_teamID)) {
-   	    		PrintToChatAll("Player %s (RGL div: %s) joined the server", div_name_teamid[1], div_name_teamid[0]);
-	    		return;
+   	    			PrintToChatAll("Player %s (RGL div: %s) joined the server", div_name_teamid[1], div_name_teamid[0]);
+	    			return;
 			}
 			KickClient(client, "You aren't currently in the team whitelist");
 			return;
-    	}
+    		}
 
-    	if (RGL_MODE_ALL & GetConVarInt(g_rglMode)) {
+    		if (RGL_MODE_ALL & GetConVarInt(g_rglMode)) {
 			PrintToChatAll("Player %s (RGL div: %s) joined the server", div_name_teamid[1], div_name_teamid[0]);
 			return;
-    	}
+    		}
 
-    	if (RGL_SCRIM & GetConVarInt(g_rglMode) && StringToInt(div_name_teamid[2]) == GetConVarInt(g_scrimID)) {
+    		if (RGL_SCRIM & GetConVarInt(g_rglMode) && StringToInt(div_name_teamid[2]) == GetConVarInt(g_scrimID)) {
 			PrintToChatAll("Player %s (RGL div: %s) joined the server", div_name_teamid[1], div_name_teamid[0]);
 			return;
-    	}
+    		}
 
-    	if (RGL_MATCH & GetConVarInt(g_rglMode) && StringToInt(div_name_teamid[2]) == GetConVarInt(g_matchID)) {
+    		if (RGL_MATCH & GetConVarInt(g_rglMode) && StringToInt(div_name_teamid[2]) == GetConVarInt(g_matchID)) {
 			PrintToChatAll("Player %s (RGL div: %s) joined the server", div_name_teamid[1], div_name_teamid[0]);
 			return;
-    	}
+    		}
 
 		// old heuristic for Ringers / Specs
 		/*
-    	if (ringer_spec_index < GetConVarInt(g_otherPlayerCount)) {
-			strcopy(ringer_spec_ids[ringer_spec_index], STEAMID_LENGTH, steamID);
-			ringer_spec_index++;
-			PrintToChatAll("Player %s (RGL div: %s) joined the server", div_name_tid[1], div_name_tid[0]);		
-			return;
-    	}
+    			if (ringer_spec_index < GetConVarInt(g_otherPlayerCount)) {
+				strcopy(ringer_spec_ids[ringer_spec_index], STEAMID_LENGTH, steamID);
+				ringer_spec_index++;
+				PrintToChatAll("Player %s (RGL div: %s) joined the server", div_name_tid[1], div_name_tid[0]);		
+				return;
+    			}
 		*/
 
-    	// deny all here
-    	KickClient(client, "You don't fit the current server's whitelist rules");
+		// deny all here
+		KickClient(client, "You don't fit the current server's whitelist rules");
 	
 	}
 
@@ -184,31 +184,33 @@ public void GetRGLUserByID(const String:steamID[], int client) {
 
 public void OnClientAuthorized(int client, const char[] auth)
 {
-    char steamID[STEAMID_LENGTH];
-    GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
+	char steamID[STEAMID_LENGTH];
+	GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
 
-    char password[256];
-    GetClientInfo(client, FAKE_PASSWORD_VAR, password, 256);
-    PrintToServer("Inputted 'pass': %s", password);
+	char password[256];
+	GetClientInfo(client, FAKE_PASSWORD_VAR, password, 256);
+	PrintToServer("Inputted 'pass': %s", password);
 
 	char fakepw_buf[256];
 	GetConVarString(g_ringerPassword, fakepw_buf, 256);
 
-    if (strlen(password) > 0) {
-		int pw_len = strlen(fakepw_buf);
-		if (strncmp(password, fakepw_buf, min(pw_len, password), false) == 0) {
+	if (strlen(password) > 0) {
+		int pw_len = strlen(password);
+		int fakepw_len = strlen(fakepw_buf);
+		int min_len = min(pw_len, fakepw_len);
+		if (strncmp(password, fakepw_buf, min_len, false) == 0) {
 			PrintToServer("Joined via password");
 			return;
 		}
-    }
+	}
 
-    // if we aren't using whitelist
-    if (GetConVarInt(g_useWhitelist) == 0) {
-        PrintToServer("Not using whitelist");
+	// if we aren't using whitelist
+	if (GetConVarInt(g_useWhitelist) == 0) {
+		PrintToServer("Not using whitelist");
 		return;
-    }
+	}
 
-    GetRGLUserByID(steamID, client); 
+	GetRGLUserByID(steamID, client); 
 }
 
 // TODO http://sourcemod.net/new-api/clients/IsClientSourceTV
