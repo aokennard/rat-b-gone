@@ -117,6 +117,9 @@ public void PrintRGLJoinString(const char[] name, const char[] division) {
 }
 
 public int ETF2LDivisionToInt(char tier[64]) {
+	if (strncmp(tier, "banned", 6, false) == 0) {
+		return 0x0;
+	}
 	switch (tier[0]) {
 		case '0':
 			return ETF2L_DIV_PREM;
@@ -134,19 +137,19 @@ public int ETF2LDivisionToInt(char tier[64]) {
 
 public int RGLDivisionToInt(char div[64]) {
 	if (strncmp(div, "Invite", 6, false) == 0)
-		return 0x1;
+		return RGL_DIV_INVITE;
 	if (strncmp(div, "Div-1", 5, false) == 0)
-		return 0x2;
+		return RGL_DIV_1;
 	if (strncmp(div, "Div-2", 5, false) == 0)
-		return 0x4;
+		return RGL_DIV_2;
 	if (strncmp(div, "Main", 4, false) == 0)
-		return 0x8;
+		return RGL_DIV_MAIN;
 	if (strncmp(div, "Intermediate", 12, false) == 0)
-		return 0x10;
+		return RGL_DIV_INT;
 	if (strncmp(div, "Amateur", 7, false) == 0)
-		return 0x20;
+		return RGL_DIV_AMA;
 	if (strncmp(div, "Newcomer", 8, false) == 0)
-		return 0x40;
+		return RGL_DIV_NEW;
 	if (strncmp(div, "banned", 6, false) == 0)
 		return 0x0;
 	return -1;
@@ -162,7 +165,7 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 	int div = (league == LEAGUE_RGL ? RGLDivisionToInt(divisionNameTeamID[0]) : ETF2LDivisionToInt(divisionNameTeamID[0]));
 	if (div == -1) {
 		// investigate
-		PrintToServer("Unexpected tier, check up on it");
+		PrintToServer("Unexpected tier, check up on it - likely not on a team");
 	}
 	if (div == 0 && GetConVarInt(g_allowBannedPlayers) == 1) {
 		PrintToChatAll("Player %s (league banned) is joining", divisionNameTeamID[1]);

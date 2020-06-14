@@ -28,6 +28,15 @@ if __name__ == "__main__":
 
     name = resp_json["player"]["name"]
     teams = resp_json["player"]["teams"]
+    bans = resp_json["player"]["bans"]
+
+    if bans:
+        current_time = time.time()
+        for ban in bans:
+            if ban["end"] > current_time:
+                print(",".join(["banned", name, "banned"]))
+                exit(0)
+
     comp_team = None
 
     if teams is None:
