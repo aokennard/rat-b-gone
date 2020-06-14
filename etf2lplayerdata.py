@@ -40,11 +40,11 @@ if __name__ == "__main__":
         exit(-1)
 
     # This is if we want to only check active ones
-    matches_json = requests.get(ETF2L_TEAM_MATCHES_API_URL.format(comp_team["id"])).text
+    #matches_json = json.loads(requests.get(ETF2L_TEAM_MATCHES_API_URL.format(comp_team["id"])).text)
 
-    if matches_json["matches"] is None or comp_team["competitions"] is None:
-        print("No active team")
-        exit(-1)
+    #if matches_json["matches"] is None or comp_team["competitions"] is None:
+    #    print("No active team")
+    #    exit(-1)
 
     teamid = comp_team["id"]
     recent_competition = -1
