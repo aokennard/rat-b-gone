@@ -90,8 +90,8 @@ if __name__ == "__main__":
         name_data = cols[2].find_elements(By.TAG_NAME, "a")
         # test - 76561197962684957 banned
         if name_data[0].get_attribute('data-original-title') == "Under League Probation":
-            print("Banned player, not allowed I guess?")
-            exit(-1)
+            print(",".join(["banned", name_data[1].text, "banned"]))
+            exit(0)
         name = name_data[1].text
         team = cols[3].find_elements(By.TAG_NAME, "a")[0].get_attribute('href').split("=")[1]
         div = cols[4].find_elements(By.TAG_NAME, "a")[0].text

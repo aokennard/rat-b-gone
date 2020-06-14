@@ -56,6 +56,7 @@ ConVar g_matchID;
 ConVar g_ringerPassword;
 ConVar g_leaguesAllowed;
 ConVar g_gamemode;
+ConVar g_allowBannedPlayers;
 
 public Plugin:myinfo = {
 	name        = "Rat-B-Gone: TF2 Competitive Player Whitelist",
@@ -73,6 +74,8 @@ public OnPluginStart()
 
 	CreateConVar("plw_version", PLUGIN_VERSION, "Auto-kick whitelist");
 	g_useWhitelist = CreateConVar("plw_enable", "1", "Toggles the use of the competitive filter");
+
+	g_allowBannedPlayers = CreateConVar("plw_allow_banned", "0", "Allow banned players to play in the server");
 
 	IntToString(GAMEMODE_6S, macro_int_buf, 64);
 	g_gamemode = CreateConVar("plw_gamemode", macro_int_buf, "The type of gamemode to search for when doing player auth; 1 = HL, 2 = 6s");
@@ -144,7 +147,9 @@ public int RGLDivisionToInt(char div[64]) {
 		return 0x20;
 	if (strncmp(div, "Newcomer", 8, false) == 0)
 		return 0x40;
-	return 0x0;
+	if (strncmp(div, "banned", 6, false) == 0)
+		return 0x0;
+	return -1;
 }
 
 public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int league) {
@@ -157,7 +162,11 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 	int div = (league == LEAGUE_RGL ? RGLDivisionToInt(divisionNameTeamID[0]) : ETF2LDivisionToInt(divisionNameTeamID[0]));
 	if (div == -1) {
 		// investigate
-		PrintToServer("Unexpected ETF2L tier, check up on it");
+		PrintToServer("Unexpected tier, check up on it");
+	}
+	if (div == 0 && GetConVarInt(g_allowBannedPlayers) == 1) {
+		PrintToChatAll("Player %s (league banned) is joining", divisionNameTeamID[1]);
+		return;
 	}
 
 	if ((div & GetConVarInt(league == LEAGUE_RGL ? g_rglDivsAllowed : g_etf2lDivsAllowed)) == 0) {
@@ -168,29 +177,19 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 	if (MODE_TEAMONLY & GetConVarInt(g_serverMode)) {
 		if (StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_teamID)) {
    				(league == LEAGUE_RGL ? PrintRGLJoinString(divisionNameTeamID[1], divisionNameTeamID[0]) : PrintETF2LJoinString(divisionNameTeamID[1], divisionNameTeamID[0]));
-				return;
+		} else {
+			KickClient(client, "You aren't currently in the team whitelist");
 		}
-		KickClient(client, "You aren't currently in the team whitelist");
-		return;
-	}
-
-	if (MODE_ALL & GetConVarInt(g_serverMode)) {
+	} else if (MODE_ALL & GetConVarInt(g_serverMode)) {
 		(league == LEAGUE_RGL ? PrintRGLJoinString(divisionNameTeamID[1], divisionNameTeamID[0]) : PrintETF2LJoinString(divisionNameTeamID[1], divisionNameTeamID[0]));
-		return;
-	}
-
-	if (MODE_SCRIM & GetConVarInt(g_serverMode) && StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_scrimID)) {
+	} else if (MODE_SCRIM & GetConVarInt(g_serverMode) && StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_scrimID)) {
 		(league == LEAGUE_RGL ? PrintRGLJoinString(divisionNameTeamID[1], divisionNameTeamID[0]) : PrintETF2LJoinString(divisionNameTeamID[1], divisionNameTeamID[0]));
-		return;
-	}
-
-	if (MODE_MATCH & GetConVarInt(g_serverMode) && StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_matchID)) {
+	} else if (MODE_MATCH & GetConVarInt(g_serverMode) && StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_matchID)) {
 		(league == LEAGUE_RGL ? PrintRGLJoinString(divisionNameTeamID[1], divisionNameTeamID[0]) : PrintETF2LJoinString(divisionNameTeamID[1], divisionNameTeamID[0]));
-		return;
-	}
-
+	} else {
 	// deny all here
-	KickClient(client, "You don't fit the current server's whitelist rules");
+		KickClient(client, "You don't fit the current server's whitelist rules");
+	}
 }
 
 public void ETF2LGetPlayerDataCallback(bool success, const char[] command, System2ExecuteOutput output, any data) {
@@ -248,7 +247,7 @@ public void GetRGLUserByID(const String:steamID[], int client) {
 	char rglGetDataCommand[256];
 	char smPath[256];
 	GetSMPath(smPath, sizeof(smPath));
-	Format(rglGetDataCommand, 256, "python3 %s/rglplayerdata.py %s", smPath, steamID);
+	Format(rglGetDataCommand, 256, "python3 %s/rglplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
 	PrintToServer("RGL cmd: %s", rglGetDataCommand);
 
 	System2_ExecuteThreaded(RGLGetPlayerDataCallback, rglGetDataCommand, client);

@@ -30,6 +30,10 @@ if __name__ == "__main__":
     teams = resp_json["player"]["teams"]
     comp_team = None
 
+    if teams is None:
+        print("No teams")
+        exit(-1)
+
     for team in teams:
         if team["type"] == GAMEMODE_MAP[gamemode]:
             comp_team = team
