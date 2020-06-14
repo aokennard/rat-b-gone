@@ -22,7 +22,7 @@ Additionally, this uses [System2](https://github.com/dordnung/System2) as a depe
 
 Download this repo and extract to your addons/sourcemod folder. I assume you have the SourcePawn compiler (`./spcomp`) in sourcemod/scripting.
 Define environment variable SOURCEMOD_ROOT at the root of your SourceMod directory, `addons/sourcemod`.  
-You may want to save it in a file that gets sourced like ~/.bashrc.  
+You may want to save it in a file that gets `source`d.  
 Finally, `make` in order to build the plugin.
 
 ## Usage
@@ -31,6 +31,7 @@ This plugin restricts who can join a server based on a few variables.
 `plw_version`: Prints the plugin version.  
 `plw_enable`: Whether or not to use the whitelist  
 `plw_leagues`: What leagues (RGL, ETF2L) to consider players in to be able to join.  
+`plw_gamemode`:
 `plw_divs_(rgl/etf2l)`: What division players are allowed into the server. This is all by default, and considered first before other filters.  
 `plw_mode`: Filters who can join the server based on various 'modes': team-only, scrim-only, team-only, combinations of these, or all.  
 `plw_(scrim/team/match)id`: The ID of an RGL team, to be used for `plw_mode`'s, allowing only certain teams of players into the server.  

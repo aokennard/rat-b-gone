@@ -7,7 +7,8 @@ import shutil
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-RGL_SEARCH_LEAGUE_TABLE = {"6v6" : "40", "7v7" : "1", "6v6NR" : "37", "9v9" : "24"}
+# 1 = hl, 2 = 6v
+RGL_SEARCH_LEAGUE_TABLE = {"2" : "40", "7v7" : "1", "6v6NR" : "37", "1" : "24"}
 RGL_SEARCH_URL = "https://rgl.gg/public/playersearch.aspx?r="
 INPUT_ID_STRING = "txtSearchPlayer"
 INPUT_BUTTON_ID_STRING = "btnSearchPlayer"
@@ -49,6 +50,7 @@ class PageLoadWrapper(object):
 if __name__ == "__main__":
     # we spawned this process - we gave it this argument guaranteed
     steamid = sys.argv[1]
+    gamemode = sys.argv[2]
     current_sid = steamid
 
     # TODO support for other webdrivers
@@ -59,7 +61,7 @@ if __name__ == "__main__":
     
     chromedriver_path = shutil.which('chromedriver')
     driver = webdriver.Chrome(executable_path=chromedriver_path, chrome_options=cr_options, service_args=['--verbose', '--log-path=/tmp/chromedriver.log'])
-    driver.get(RGL_SEARCH_URL + RGL_SEARCH_LEAGUE_TABLE["6v6"])
+    driver.get(RGL_SEARCH_URL + RGL_SEARCH_LEAGUE_TABLE[gamemode])
 
     # locate the place to put ID
 
@@ -85,8 +87,12 @@ if __name__ == "__main__":
         # parsing to find relevant info - name, team, division
         tbody_data = driver.find_element_by_xpath('//tbody[.//tr[.//th[text()="Name"]]]')
         cols = tbody_data.find_elements(By.TAG_NAME, "tr")[1].find_elements(By.TAG_NAME, "td")
-        # ugly but whatever, it's functional - can fix later
-        name = cols[2].find_elements(By.TAG_NAME, "a")[1].text
+        name_data = cols[2].find_elements(By.TAG_NAME, "a")
+        # test - 76561197962684957 banned
+        if name_data[0].get_attribute('data-original-title') == "Under League Probation":
+            print("Banned player, not allowed I guess?")
+            exit(-1)
+        name = name_data[1].text
         team = cols[3].find_elements(By.TAG_NAME, "a")[0].get_attribute('href').split("=")[1]
         div = cols[4].find_elements(By.TAG_NAME, "a")[0].text
         print(",".join([div, name, team]))

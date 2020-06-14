@@ -43,6 +43,9 @@
 #define LEAGUE_ETF2L 0x2
 #define LEAGUE_ALL (LEAGUE_RGL | LEAGUE_ETF2L)
 
+#define GAMEMODE_HL 0x1
+#define GAMEMODE_6S 0x2
+
 ConVar g_useWhitelist;
 ConVar g_rglDivsAllowed;
 ConVar g_etf2lDivsAllowed;
@@ -52,6 +55,7 @@ ConVar g_scrimID;
 ConVar g_matchID;
 ConVar g_ringerPassword;
 ConVar g_leaguesAllowed;
+ConVar g_gamemode;
 
 public Plugin:myinfo = {
 	name        = "Rat-B-Gone: TF2 Competitive Player Whitelist",
@@ -65,10 +69,13 @@ public Plugin:myinfo = {
 public OnPluginStart()
 {
 	//ringer_spec_index = 0;
-	char macro_int_buf[64]; // because stringify doesnt exist apparently
+	char macro_int_buf[32]; // because stringify doesnt exist apparently
 
 	CreateConVar("plw_version", PLUGIN_VERSION, "Auto-kick whitelist");
 	g_useWhitelist = CreateConVar("plw_enable", "1", "Toggles the use of the competitive filter");
+
+	IntToString(GAMEMODE_6S, macro_int_buf, 64);
+	g_gamemode = CreateConVar("plw_gamemode", macro_int_buf, "The type of gamemode to search for when doing player auth; 1 = HL, 2 = 6s");
 
 	IntToString(LEAGUE_ALL, macro_int_buf, 64);
 	g_leaguesAllowed = CreateConVar("plw_leagues", macro_int_buf, "The leagues to check potential joiners may be in (or operator); 1 = RGL, 2 = ETF2L");
@@ -211,7 +218,7 @@ public void GetETF2LUserByID(const String:steamID[], int client) {
 	char etf2lGetDataCommand[256];
 	char smPath[256];
 	GetSMPath(smPath, sizeof(smPath));
-	Format(etf2lGetDataCommand, 256, "python3 %s/etf2lplayerdata.py %s", smPath, steamID);
+	Format(etf2lGetDataCommand, 256, "python3 %s/etf2lplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
 	PrintToServer("ETF2L cmd: %s", etf2lGetDataCommand);
 	
 	System2_ExecuteThreaded(ETF2LGetPlayerDataCallback, etf2lGetDataCommand, client);
