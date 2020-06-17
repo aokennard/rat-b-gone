@@ -66,11 +66,6 @@ public Plugin:myinfo = {
 	url         = "pootis.org"
 };
 
-public void PrintToLogServer(const char[] format, any... ...) {
-	LogToFile("testout", format, ...);
-	PrintToServer(format, ...);
-}
-
 public OnPluginStart()
 {
 	//ringer_spec_index = 0;
@@ -173,11 +168,11 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 	output.GetOutput(pyOutData, 256);
 	ExplodeString(pyOutData, ",", divisionNameTeamID, 3, 64);
 
-	PrintToLogServer("div: %s name: %s teamid: %s", divisionNameTeamID[0], divisionNameTeamID[1], divisionNameTeamID[2]);
+	PrintToServer("div: %s name: %s teamid: %s", divisionNameTeamID[0], divisionNameTeamID[1], divisionNameTeamID[2]);
 	int div = (league == LEAGUE_RGL ? RGLDivisionToInt(divisionNameTeamID[0]) : ETF2LDivisionToInt(divisionNameTeamID[0]));
 	if (div == -1) {
 		// investigate
-		PrintToLogServer("Unexpected tier, check up on it - likely not on a team");
+		PrintToServer("Unexpected tier, check up on it - likely not on a team");
 	}
 	if (div == 0 && GetConVarInt(g_allowBannedPlayers) == 1) {
 		PrintToChatAll("Player %s (league banned) is joining", divisionNameTeamID[1]);
@@ -233,7 +228,7 @@ public void GetETF2LUserByID(const String:steamID[], int client) {
 	char smPath[256];
 	GetSMPath(smPath, sizeof(smPath));
 	Format(etf2lGetDataCommand, 256, "python3 %s/etf2lplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
-	PrintToLogServer("ETF2L cmd: %s", etf2lGetDataCommand);
+	PrintToServer("ETF2L cmd: %s", etf2lGetDataCommand);
 	
 	System2_ExecuteThreaded(ETF2LGetPlayerDataCallback, etf2lGetDataCommand, client);
 }
@@ -245,7 +240,7 @@ public void RGLGetPlayerDataCallback(bool success, const char[] command, System2
 		// failed to get, they aren't in RGL
 		char pyOutData[256];
 		output.GetOutput(pyOutData, 256);
-		PrintToLogServer("output: %s", pyOutData);
+		PrintToServer("output: %s", pyOutData);
 		// etf2l is always checked last unless it's only one
 		if (GetConVarInt(g_leaguesAllowed) & LEAGUE_ETF2L) {
 			char steamID[STEAMID_LENGTH];
@@ -263,7 +258,7 @@ public void GetRGLUserByID(const String:steamID[], int client) {
 	char smPath[256];
 	GetSMPath(smPath, sizeof(smPath));
 	Format(rglGetDataCommand, 256, "python3 %s/rglplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
-	PrintToLogServer("RGL cmd: %s", rglGetDataCommand);
+	PrintToServer("RGL cmd: %s", rglGetDataCommand);
 
 	System2_ExecuteThreaded(RGLGetPlayerDataCallback, rglGetDataCommand, client);
 }
@@ -277,12 +272,12 @@ public void OnClientAuthorized(int client, const char[] auth)
 
 	char steamID[STEAMID_LENGTH];
 	GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
-	PrintToLogServer("steamid %s connected", steamID);
+	PrintToServer("steamid %s connected", steamID);
 
 	// Client's password
 	char password[256];
 	GetClientInfo(client, FAKE_PASSWORD_VAR, password, 256);
-	PrintToLogServer("Inputted 'pass': %s", password);
+	PrintToServer("Inputted 'pass': %s", password);
 
 	// Server controlled password
 	char fakePasswordBuf[256];
@@ -293,14 +288,14 @@ public void OnClientAuthorized(int client, const char[] auth)
 		int fakePasswordLen = strlen(fakePasswordBuf);
 		int minPasswordLen = min(passwordLen, fakePasswordLen); // don't have gcc's typeof helper macro here, so we do this
 		if (strncmp(password, fakePasswordBuf, minPasswordLen, false) == 0) {
-			PrintToLogServer("Joined via password");
+			PrintToServer("Joined via password");
 			return;
 		}
 	}
 
 	// if we aren't using whitelist
 	if (GetConVarInt(g_useWhitelist) == 0) {
-		PrintToLogServer("Not using whitelist");
+		PrintToServer("Not using whitelist");
 		return;
 	}
 	// if RGL / all, check RGL first (then check etf2l)
