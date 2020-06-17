@@ -59,8 +59,11 @@ if __name__ == "__main__":
     cr_options.add_argument('--headless')
     cr_options.add_argument('--no-sandbox')
     
-    chromedriver_path = shutil.which('chromedriver')
+    chromedriver_path = r"/mnt/c/Users/aoken/Documents/rgl-player-whitelist/chromedriver.exe" #shutil.which('chromedriver')
     driver = webdriver.Chrome(executable_path=chromedriver_path, chrome_options=cr_options, service_args=['--verbose', '--log-path=/tmp/chromedriver.log'])
+    if not driver:
+        print("Failed to create ChromeDriver")
+        exit(-1)
     driver.get(RGL_SEARCH_URL + RGL_SEARCH_LEAGUE_TABLE[gamemode])
 
     # locate the place to put ID
@@ -70,6 +73,9 @@ if __name__ == "__main__":
     # click button to refresh page
 
     button = driver.find_element_by_id(INPUT_BUTTON_ID_STRING)
+    if not button:
+        print("No button found, dying")
+        exit(-1)
     with PageLoadWrapper(driver):
         button.click()
 
@@ -86,14 +92,20 @@ if __name__ == "__main__":
     else:
         # parsing to find relevant info - name, team, division
         tbody_data = driver.find_element_by_xpath('//tbody[.//tr[.//th[text()="Name"]]]')
+        if not tbody_data:
+            print("Player not found")
+            exit(-1)
         cols = tbody_data.find_elements(By.TAG_NAME, "tr")[1].find_elements(By.TAG_NAME, "td")
+        if not cols:
+            print("Cols not found, unsure")
+            exit(-1)
         name_data = cols[2].find_elements(By.TAG_NAME, "a")
         # test - 76561197962684957 banned
         if len(name_data) == 0:
             print("look into this connect: {}".format(steamid))
             exit(-1)
         # ugly hotfix
-        if len(name_data) == 1:
+        elif len(name_data) == 1:
             # not verified
             if name_data[0].get_attribute('data-original-title') == "Under League Probation":
                 print(",".join(["banned", name_data[1].text, "banned"]))
