@@ -89,14 +89,27 @@ if __name__ == "__main__":
         cols = tbody_data.find_elements(By.TAG_NAME, "tr")[1].find_elements(By.TAG_NAME, "td")
         name_data = cols[2].find_elements(By.TAG_NAME, "a")
         # test - 76561197962684957 banned
-        if name_data[0].get_attribute('data-original-title') == "Under League Probation":
-            print(",".join(["banned", name_data[1].text, "banned"]))
+        if len(name_data) == 0:
+            print("look into this connect: {}".format(steamid))
+            exit(-1)
+        # ugly hotfix
+        if len(name_data) == 1:
+            # not verified
+            if name_data[0].get_attribute('data-original-title') == "Under League Probation":
+                print(",".join(["banned", name_data[1].text, "banned"]))
+                exit(0)
+            
+            name = name_data[0].text
+            team = cols[3].find_elements(By.TAG_NAME, "a")[0].get_attribute('href').split("=")[1]
+            div = cols[4].find_elements(By.TAG_NAME, "a")[0].text
+            print(",".join([div, name, team]))
             exit(0)
-        name = name_data[1].text
-        team = cols[3].find_elements(By.TAG_NAME, "a")[0].get_attribute('href').split("=")[1]
-        div = cols[4].find_elements(By.TAG_NAME, "a")[0].text
-        print(",".join([div, name, team]))
-        exit(0)
+        elif len(name_data) == 2:
+            name = name_data[1].text
+            team = cols[3].find_elements(By.TAG_NAME, "a")[0].get_attribute('href').split("=")[1]
+            div = cols[4].find_elements(By.TAG_NAME, "a")[0].text
+            print(",".join([div, name, team]))
+            exit(0)
 
 
 
