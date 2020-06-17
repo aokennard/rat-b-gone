@@ -59,7 +59,7 @@ if __name__ == "__main__":
     cr_options.add_argument('--headless')
     cr_options.add_argument('--no-sandbox')
     
-    chromedriver_path = r"/mnt/c/Users/aoken/Documents/rgl-player-whitelist/chromedriver.exe" #shutil.which('chromedriver')
+    chromedriver_path = shutil.which('chromedriver')
     driver = webdriver.Chrome(executable_path=chromedriver_path, chrome_options=cr_options, service_args=['--verbose', '--log-path=/tmp/chromedriver.log'])
     if not driver:
         print("Failed to create ChromeDriver")
