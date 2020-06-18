@@ -64,9 +64,10 @@ if __name__ == "__main__":
     if not driver:
         print("Failed to create ChromeDriver")
         exit(-1)
-    driver.get(RGL_SEARCH_URL + RGL_SEARCH_LEAGUE_TABLE[gamemode])
+    data = {'ctl00$ContentPlaceHolder1$txtSearchPlayer' : steamid}
+    driver.get(RGL_SEARCH_URL + RGL_SEARCH_LEAGUE_TABLE[gamemode], data)
 
-    # locate the place to put ID
+    '''# locate the place to put ID
 
     try:
         driver.execute_script("document.getElementById('{}').setAttribute('value', '{}')".format(INPUT_ID_STRING, steamid))
@@ -85,7 +86,7 @@ if __name__ == "__main__":
         button.click()
 
     # if they arent in RGL - there's a better way of doing this but i'm lazy
-   
+   '''
     try: 
         table_tag = driver.find_element_by_xpath('//tbody[.//tr[.//th[text()="Name"]]]')
     except Exception:
