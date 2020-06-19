@@ -173,6 +173,8 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 	if (div == -1) {
 		// investigate
 		PrintToServer("Unexpected tier, check up on it - likely not on a team");
+		strcopy(divisionNameTeamID[0], 6, "No div");
+		strcopy(divisionNameTeamID[2], 2, "-1");
 	}
 	if (div == 0 && GetConVarInt(g_allowBannedPlayers) == 1) {
 		PrintToChatAll("Player %s (league banned) is joining", divisionNameTeamID[1]);
@@ -180,6 +182,7 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 	}
 
 	if ((div & GetConVarInt(league == LEAGUE_RGL ? g_rglDivsAllowed : g_etf2lDivsAllowed)) == 0) {
+                PrintToChatAll("RGL player %s tried to join", divisionNameTeamID[1]);
 		KickClient(client, "You are not an %s player in the currently whitelisted divisions", league == LEAGUE_RGL ? "RGL" : "ETF2L");
 		return;
 	}
@@ -198,6 +201,7 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 		PrintJoinString(divisionNameTeamID[1], divisionNameTeamID[0], league);
 	} else {
 	// deny all here
+		PrintToChatAll("RGL player %s tried to join", divisionNameTeamID[1]);
 		KickClient(client, "You don't fit the current server's whitelist rules");
 	}
 }

@@ -122,10 +122,11 @@ if __name__ == "__main__":
         print("Couldn't find correct gamemode")
         exit(-1)
 
-    if division is None:
+    if division is None or team_id is None:
         division = ""
-    if team_id is None:
         team_id = ""
+        print(",".join([division, name, team_id]))
+        exit(-1)
     
     print(",".join([division, name, team_id]))
     exit(0)
