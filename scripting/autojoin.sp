@@ -7,7 +7,7 @@
 
 #define min(%1,%2) (((%1) < (%2)) ? (%1) : (%2))
 
-#include "plugin_version"
+#include "plw_plugin_version"
 
 // barbancle
 #define HOME_TEAM_ID 6602
