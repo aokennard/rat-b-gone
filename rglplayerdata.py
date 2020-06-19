@@ -3,138 +3,135 @@ import sys
 import os
 import time
 import shutil
-
-from selenium import webdriver
-from selenium.webdriver.common.by import By
+import requests
+from bs4 import BeautifulSoup
 
 # 1 = hl, 2 = 6v
 RGL_SEARCH_LEAGUE_TABLE = {"2" : "40", "7v7" : "1", "6v6NR" : "37", "1" : "24"}
-RGL_SEARCH_URL = "https://rgl.gg/public/playersearch.aspx?r="
-INPUT_ID_STRING = "txtSearchPlayer"
-INPUT_BUTTON_ID_STRING = "btnSearchPlayer"
-NOT_FOUND_ELEM_ID = "ContentPlaceHolder1_lblMessage"
-
-WAIT_FOR_TIMEOUT = 3
+RGL_LEAGUE_STRING_ID_MAP = {"Prolander" : "7v7", "NR Sixes" : "6v6NR", "Highlander" : "1", "Trad. Sixes" : "2"}
+RGL_SEARCH_URL = "https://rgl.gg/Public/PlayerProfile.aspx?p={}&r={}"
 
 current_sid = 0
 
-def wait_for_condition(condition_function):
-    start = time.time()
-    end = start + WAIT_FOR_TIMEOUT
-    while time.time() < end:
-        if condition_function():
-            return True
-        else:
-            time.sleep(0.1)
-    raise TimeoutError('Timedout waiting for function: {}'.format(condition_function.__name__))
+def get_name_from_div(div):
+    try:
+        timeline = div.find("h1")
+        # may say if banned here?
+        name_span = timeline.find(id="ContentPlaceHolder1_Main_lblPlayerName")
+        # hacky but functional, TODO better way
+        ban = False
+        if name_span.find("s") and name_span.find("s").has_attr('style') and name_span.find("s")['style'] == "color: red":
+            ban = True
+        return name_span.text, ban
+    except Exception:
+        return None, None
 
-# wrapper class for waiting until a new page is loaded
-class PageLoadWrapper(object):
-    def __init__(self, browser):
-        self.browser = browser
+def get_gamemode_from_string(gamemode_str):
+    
+    gamemode, rgl, region = gamemode_str.split('-')
+    gamemode = gamemode.rstrip()
+    region = region.lstrip()
 
-    def __enter__(self):
-        self.old_page = self.browser.find_element_by_tag_name('html')
+    # ignore one day cups or weird stuff - also TODO cleanup later
 
-    def page_has_loaded(self):
-        new_page = self.browser.find_element_by_tag_name('html')
-        # either there is red text saying theres no player found, or there is new content
-        # TODO make this less awful
-        player_not_found_elem = driver.find_element_by_id(NOT_FOUND_ELEM_ID).get_attribute('style')
-        player_found_elem = driver.find_element_by_xpath('//tbody[.//tr[.//th[text()="Name"]]]')
-        return player_not_found_elem or player_found_elem
+    if gamemode == "Prolander":
+        if region == "North America":
+            return RGL_LEAGUE_STRING_ID_MAP[gamemode]
+        return None
+    if gamemode == "Highlander":
+        if region == "HL North America":
+            return RGL_LEAGUE_STRING_ID_MAP[gamemode]
+        return None
+    if gamemode == "Trad. Sixes":
+        if region == "NA Traditional Sixes":
+            return RGL_LEAGUE_STRING_ID_MAP[gamemode]
+        return None
+    if gamemode == "NR Sixes":
+        if region == "No Restriction Sixes":
+            return RGL_LEAGUE_STRING_ID_MAP[gamemode]
+        return None
+    return None
 
-    def __exit__(self, *_):
-        wait_for_condition(self.page_has_loaded)
+def get_div_teamid_from_table(table):
+    division = None
+    team_id = None
+    try:
+        rows = table.find_all("tr")[1:] # first is a header
+        # if it's green then it's active
+        if rows[0].has_attr('style') and rows[0]['style'] == 'background-color: #B9DFCD':
+            most_recent_cols = rows[0].find_all('td')
+            # I think for now all I care about is the first one, but some stuff may be placeholders for later
+            division = most_recent_cols[1].text.strip()
+            # yikes
+            team_id = most_recent_cols[2].find('a')['href'].split('?t=')[1]
+    except Exception:
+        pass
+
+    return division, team_id
 
 if __name__ == "__main__":
-    # we spawned this process - we gave it this argument guaranteed
+    # we spawned this process - we gave it these arguments guaranteed
     steamid = sys.argv[1]
     gamemode = sys.argv[2]
     current_sid = steamid
 
-    # TODO support for other webdrivers
-    # this is built to run on a VPS without X forwarding - also it runs faster headless
-    cr_options = webdriver.ChromeOptions()
-    cr_options.add_argument('--headless')
-    cr_options.add_argument('--no-sandbox')
-    
-    chromedriver_path = shutil.which('chromedriver')
-    driver = webdriver.Chrome(executable_path=chromedriver_path, chrome_options=cr_options, service_args=['--verbose', '--log-path=/tmp/chromedriver.log'])
-    if not driver:
-        print("Failed to create ChromeDriver")
+    request = requests.get(RGL_SEARCH_URL.format(steamid, RGL_SEARCH_LEAGUE_TABLE[gamemode]))
+    soup = BeautifulSoup(request.content, features="lxml")
+
+    div_head = soup.find("div", {"class":"col-sm-9"})
+
+    div_name = div_head.find("div", {"class":"page-header text-center"})
+
+    # verify they exist
+
+    placeholder = div_head.find(id="ContentPlaceHolder1_Main_hMessage")
+    if placeholder.text.lstrip() == "Player does not exist in RGL":
+        print("Player not found")
         exit(-1)
-    data = {'ctl00$ContentPlaceHolder1$txtSearchPlayer' : steamid}
-    driver.get(RGL_SEARCH_URL + RGL_SEARCH_LEAGUE_TABLE[gamemode], data)
 
-    '''# locate the place to put ID
-
-    try:
-        driver.execute_script("document.getElementById('{}').setAttribute('value', '{}')".format(INPUT_ID_STRING, steamid))
-    except Exception:
-        print("input not found")
-        driver.quit()
+    name, ban_status = get_name_from_div(div_name)
+    if name == None:
+        print("Name not found")
         exit(-1)
-    # click button to refresh page
+    if ban_status:
+        print(",".join(["banned", name, "banned"]))
+        exit(0)
 
-    button = driver.find_element_by_id(INPUT_BUTTON_ID_STRING)
-    if not button:
-        print("No button found, dying")
-        driver.quit()
-        exit(-1)
-    with PageLoadWrapper(driver):
-        button.click()
+    # h3, hr, table is the format repeated
+    h3s = div_head.find_all("h3")
+    league_types = h3s # first is just a message, last is ban history, other misc too maybe
+    league_tables = div_head.find_all("table")
+    division = None
+    team_id = None
 
-    # if they arent in RGL - there's a better way of doing this but i'm lazy
-   '''
-    try: 
-        table_tag = driver.find_element_by_xpath('//tbody[.//tr[.//th[text()="Name"]]]')
-    except Exception:
-        table_tag = None
+    # at end of league_types / h3's, there is a banhistory
+    league_table_index = 0
+    for i, league_type_tag in enumerate(league_types):
+        league_type_span = league_type_tag.find("span") #.find("strong").text
 
-    if not table_tag:
-        print("No player with id found")
-        driver.quit()
-        exit(-1)
+        if league_type_span['id'] and league_type_span['id'].startswith("ContentPlaceHolder1_Main_rptLeagues_lblLeagueName"):
+            league_type_string = league_type_span.text
+            # process string to determine if correct gamemode
+            if gamemode == get_gamemode_from_string(league_type_string):
+                league_table = league_tables[league_table_index]
+                division, team_id = get_div_teamid_from_table(league_table)
+                break
+            # assume league tables are contiguous
+            league_table_index += 1
     else:
-        # parsing to find relevant info - name, team, division
-        tbody_data = driver.find_element_by_xpath('//tbody[.//tr[.//th[text()="Name"]]]')
-        if not tbody_data:
-            print("Player not found")
-            driver.quit()
-            exit(-1)
-        cols = tbody_data.find_elements(By.TAG_NAME, "tr")[1].find_elements(By.TAG_NAME, "td")
-        if not cols:
-            print("Cols not found, unsure")
-            driver.quit()
-            exit(-1)
-        name_data = cols[2].find_elements(By.TAG_NAME, "a")
-        # test - 76561197962684957 banned
-        if len(name_data) == 0:
-            print("look into this connect: {}".format(steamid))
-            driver.quit()
-            exit(-1)
-        # ugly hotfix
-        elif len(name_data) == 1:
-            # not verified
-            if name_data[0].get_attribute('data-original-title') == "Under League Probation":
-                print(",".join(["banned", name_data[1].text, "banned"]))
-                driver.quit()
-                exit(0)
-            
-            name = name_data[0].text
-            team = cols[3].find_elements(By.TAG_NAME, "a")[0].get_attribute('href').split("=")[1]
-            div = cols[4].find_elements(By.TAG_NAME, "a")[0].text
-            print(",".join([div, name, team]))
-            driver.quit()
-            exit(0)
-        elif len(name_data) == 2:
-            name = name_data[1].text
-            team = cols[3].find_elements(By.TAG_NAME, "a")[0].get_attribute('href').split("=")[1]
-            div = cols[4].find_elements(By.TAG_NAME, "a")[0].text
-            print(",".join([div, name, team]))
-            driver.quit()
-            exit(0)
+        print("Couldn't find correct gamemode")
+        exit(-1)
+
+    if division is None:
+        division = ""
+    if team_id is None:
+        team_id = ""
+    
+    print(",".join([division, name, team_id]))
+    exit(0)
+
+
+   
 
 
 

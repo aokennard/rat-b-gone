@@ -6,14 +6,9 @@ A SourcePawn plugin that verifies connecting players play in RGL / ETF2L TF2 lea
 This uses Metamod/SourceMod, a SourcePawn plugin, and Python 3. It was designed and tested on Ubuntu 16.04.
 
 ### Python 3
-This uses Selenium's Python module, the other libraries are standard.  
+This uses Python's BeautifulSoup module, the other libraries are standard.  
 Install with:  
 `pip install -r requirements.txt` or `pip3 install -r requirements.txt` if using both versions of pip.
-
-Additionally, this (currently) uses ChromeDriver on top of Selenium, so you will need to download:  
-1. Google Chrome (if not currently downloaded)  
-2. The appropriate ChromeDriver version (check version with: `google-chrome --version`), likely at [here](https://sites.google.com/a/chromium.org/chromedriver/downloads)  
-Put ChromeDriver in your PATH so that `which` can recognize your installation.
 
 ### SourcePawn
 
@@ -41,6 +36,4 @@ This plugin restricts who can join a server based on a few variables.
 ## WIP
 
 Support for specific gamemodes (6s, HL, etc)  
-STV verification  
 More ETF2L testing  
-Support for different webdrivers  
