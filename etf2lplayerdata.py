@@ -63,6 +63,7 @@ if __name__ == "__main__":
     recent_competition = -1
     division = None
 
+    # TODO more testing, I'm sure this is KeyError galore 
     for competition in comp_team["competitions"]:
         if comp_team["competitions"][competition]["division"]["tier"] is not None:
             if int(competition) > recent_competition:

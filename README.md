@@ -35,7 +35,7 @@ This plugin restricts who can join a server based on a few variables.
 
 ## WIP
 
-Moving plugin file locations to be less invasive (just sitting in SM root currently)
+Moving plugin file locations to be less invasive (just sitting in SM root currently)  
 More support + testing for specific gamemodes (6s, HL, etc)  
 More ETF2L testing (thanks Zesty!)
 
