@@ -83,11 +83,9 @@ public OnPluginStart()
 	IntToString(LEAGUE_ALL, macro_int_buf, 64);
 	g_leaguesAllowed = CreateConVar("plw_leagues", macro_int_buf, "The leagues to check potential joiners may be in (or operator); 1 = RGL, 2 = ETF2L");
 
-	IntToString(RGL_DIV_ALL, macro_int_buf, 64);
-	g_rglDivsAllowed = CreateConVar("plw_divs_rgl", macro_int_buf, "Allowed division players (comma separated): 1 = invite, 2 = div1, 3 = div2, 4 = main, 5 = intermediate, 6 = amateur, 7 = newcomer");
+	g_rglDivsAllowed = CreateConVar("plw_divs_rgl", RGL_DIV_ALL, "Allowed division players (comma separated): 1 = invite, 2 = div1, 3 = div2, 4 = main, 5 = intermediate, 6 = amateur, 7 = newcomer");
 	
-	IntToString(ETF2L_DIV_ALL, macro_int_buf, 64);
-	g_etf2lDivsAllowed = CreateConVar("plw_divs_etf2l", macro_int_buf, "Allowed division players (comma separated): 1 = prem, 2 = div1, 3 = div2, 4 = div3, 5 = div4");
+	g_etf2lDivsAllowed = CreateConVar("plw_divs_etf2l", ETF2L_DIV_ALL, "Allowed division players (comma separated): 1 = prem, 2 = div1, 3 = div2, 4 = div3, 5 = div4");
 
 	IntToString(MODE_ALL, macro_int_buf, 64);
 	g_serverMode = CreateConVar("plw_mode", macro_int_buf, "Determines who can join - 0 = only team, 1 = team + scrim, 2 = team + match, 3 = team + scrim + match, 4 = all");
@@ -290,16 +288,12 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 		PrintToChatAll("Player %s (%s league banned) is joining", league == LEAGUE_RGL ? "RGL" : "ETF2L", divisionNameTeamID[1]);
 		return;
 	}
-<<<<<<< HEAD
 	char divs[64];
+	char div_string[64];
 	GetConVarString(league == LEAGUE_RGL ? g_rglDivsAllowed : g_etf2lDivsAllowed, divs, 64);
-	if (StrContains(divs, IntToString(div), false) == -1) {
-        PrintToChatAll("RGL player %s tried to join", divisionNameTeamID[1]);
-=======
-
-	if ((div & GetConVarInt(league == LEAGUE_RGL ? g_rglDivsAllowed : g_etf2lDivsAllowed)) == 0) {
+	IntToString(div, div_string, 64);
+	if (StrContains(divs, div_string, false) == -1) {
         	PrintToChatAll("RGL player %s tried to join", divisionNameTeamID[1]);
->>>>>>> ff9e843706859cbfda274a7c74bf701aa1832a5d
 		KickClient(client, "You are not an %s player in the currently whitelisted divisions", league == LEAGUE_RGL ? "RGL" : "ETF2L");
 		return;
 	}
