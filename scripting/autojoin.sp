@@ -59,17 +59,18 @@ ConVar g_gamemode;
 ConVar g_allowBannedPlayers;
 
 public Plugin:myinfo = {
-	name        = "Rat-B-Gone: TF2 Competitive Player Whitelist",
+	name        = "TF2 Competitive Player Whitelist",
 	author      = "yosh",
-	description = "Filters out non-whitelisted users based on competitive play",
+	description = "Filters out non-whitelisted users based on competitive play (RGL / ETF2L)",
 	version     = PLUGIN_VERSION,
 	url         = "pootis.org"
 };
 
+// TODO ConVarChanged functions for variables. (hookconvarchanged?)
 public OnPluginStart()
 {
-	//ringer_spec_index = 0;
-	char macro_int_buf[32]; // because stringify doesnt exist apparently
+	// because stringify macro doesnt exist here? hmmm
+	char macro_int_buf[32];
 
 	CreateConVar("plw_version", PLUGIN_VERSION, "Auto-kick whitelist");
 	g_useWhitelist = CreateConVar("plw_enable", "1", "Toggles the use of the competitive filter");
@@ -99,12 +100,126 @@ public OnPluginStart()
 	g_matchID = CreateConVar("plw_matchid", "0", "ID of match team - sometimes allowed");
 
 	g_ringerPassword = CreateConVar("plw_fakepw", DEFAULT_FAKE_PW, "The password that ringers / specs can use to join");
+
+	HookConVarChange(g_useWhitelist, CVarChangeEnabled);
+	HookConVarChange(g_allowBannedPlayers, CVarChangeBanCheck);
+	HookConVarChange(g_gamemode, CVarChangeGamemode);
+	HookConVarChange(g_leaguesAllowed, CVarChangeLeagues);
+	HookConVarChange(g_rglDivsAllowed, CVarChangeDivsRGL);
+	HookConVarChange(g_etf2lDivsAllowed, CVarChangeDivsETF2L);
+	HookConVarChange(g_serverMode, CVarChangeMode);
+	HookConVarChange(g_teamID, CVarChangeID);
+	HookConVarChange(g_scrimID, CVarChangeID);
+	HookConVarChange(g_matchID, CVarChangeID);
+	HookConVarChange(g_ringerPassword, CVarChangeFakePW);
 	
 	PrintToServer("Competitive Player Whitelist loaded");
 }
 
-public OnPluginEnd() {
-	//CloseHandle(rgl_sid_map);
+public void CVarChangeEnabled(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	int int_newvalue = StringToInt(newvalue);
+	int int_oldvalue = StringToInt(oldvalue);
+	if (int_newvalue == int_oldvalue) {
+		return;
+	}
+	
+	PrintToChatAll("[SM]: Player whitelist %s", int_newvalue == 1 ? "enabled" : "disabled");
+}
+
+public void CVarChangeBanCheck(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	int int_newvalue = StringToInt(newvalue);
+	int int_oldvalue = StringToInt(oldvalue);
+	if (int_newvalue == int_oldvalue) {
+		return;
+	}
+
+	PrintToChatAll("[SM]: Banned players %sallowed in server", int_newvalue == 1 ? "", "not ");
+}
+
+public void CVarChangeGamemode(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	int int_newvalue = StringToInt(newvalue);
+	int int_oldvalue = StringToInt(oldvalue);
+	if (int_newvalue == int_oldvalue) {
+		return;
+	}
+
+	PrintToChatAll("[SM]: %s based whitelist", int_newvalue == GAMEMODE_HL ? "HL" : int_newvalue == GAMEMODE_6S ? "6s" : "Unknown");
+}
+
+public void CVarChangeLeagues(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	int int_newvalue = StringToInt(newvalue);
+	int int_oldvalue = StringToInt(oldvalue);
+	if (int_newvalue == int_oldvalue) {
+		return;
+	}
+
+	PrintToChatAll("[SM]: Checking %s league mode", 
+								int_newvalue == LEAGUE_RGL ? "RGL" : 
+								int_newvalue == LEAGUE_ETF2L ? "ETF2L" : 
+								int_newvalue == LEAGUE_ALL ? "RGL or ETF2L" : "unknown");
+
+}
+
+public void CVarChangeDivsRGL(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	int int_newvalue = StringToInt(newvalue);
+	int int_oldvalue = StringToInt(oldvalue);
+	if (int_newvalue == int_oldvalue) {
+		return;
+	}
+	// test
+}
+
+public void CVarChangeDivsETF2L(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	int int_newvalue = StringToInt(newvalue);
+	int int_oldvalue = StringToInt(oldvalue);
+	if (int_newvalue == int_oldvalue) {
+		return;
+	}
+	// test
+}
+
+public void CVarChangeMode(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	int int_newvalue = StringToInt(newvalue);
+	int int_oldvalue = StringToInt(oldvalue);
+	if (int_newvalue == int_oldvalue) {
+		return;
+	}
+	switch(int_newvalue) {
+		case MODE_TEAMONLY:
+			PrintToChatAll("[SM]: Only home team allowed");
+			break;
+		case MODE_SCRIM:
+			PrintToChatAll("[SM]: Only home team + scrim team allowed");
+			break;
+		case MODE_MATCH:
+			PrintToChatAll("[SM]: Only home team + match team allowed");
+			break;
+		case MODE_MATCH | MODE_SCRIM:
+			PrintToChatAll("[SM]: Only home team, match team, and scrim team allowed");
+			break;
+		case MODE_ALL:
+			PrintToChatAll("[SM]: Default all player allowed mode");
+			break;
+	}
+}
+
+public void CVarChangeID(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	int int_newvalue = StringToInt(newvalue);
+	int int_oldvalue = StringToInt(oldvalue);
+	if (int_newvalue == int_oldvalue) {
+		return;
+	}
+
+	PrintToChatAll("[SM]: %s ID changed to %d", 
+							cvar == g_teamID ? "Home team" : 
+							cvar == g_scrimID ? "Scrim team" :
+							cvar == g_matchID ? "Match team" : "Unknown cvar", int_newvalue);
+}
+
+public void CVarChangeFakePW(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	if (strcmp(oldvalue, newvalue, true) != 0) {
+		PrintToChatAll("[SM]: Changed ringer/spec password");
+	}
 }
 
 public void PrintETF2LJoinString(const char[] name, const char[] division) {
@@ -182,7 +297,7 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 	}
 
 	if ((div & GetConVarInt(league == LEAGUE_RGL ? g_rglDivsAllowed : g_etf2lDivsAllowed)) == 0) {
-                PrintToChatAll("RGL player %s tried to join", divisionNameTeamID[1]);
+        PrintToChatAll("RGL player %s tried to join", divisionNameTeamID[1]);
 		KickClient(client, "You are not an %s player in the currently whitelisted divisions", league == LEAGUE_RGL ? "RGL" : "ETF2L");
 		return;
 	}
@@ -191,6 +306,7 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 		if (StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_teamID)) {
    			PrintJoinString(divisionNameTeamID[1], divisionNameTeamID[0], league);
 		} else {
+			PrintToChatAll("RGL player %s tried to join", divisionNameTeamID[1]);
 			KickClient(client, "You aren't currently in the team whitelist");
 		}
 	} else if (MODE_ALL & GetConVarInt(g_serverMode)) {
@@ -200,7 +316,7 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 	} else if (MODE_MATCH & GetConVarInt(g_serverMode) && StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_matchID)) {
 		PrintJoinString(divisionNameTeamID[1], divisionNameTeamID[0], league);
 	} else {
-	// deny all here
+		// deny all here
 		PrintToChatAll("RGL player %s tried to join", divisionNameTeamID[1]);
 		KickClient(client, "You don't fit the current server's whitelist rules");
 	}
@@ -288,10 +404,7 @@ public void OnClientAuthorized(int client, const char[] auth)
 	GetConVarString(g_ringerPassword, fakePasswordBuf, 256);
 
 	if (strlen(password) > 0) {
-		int passwordLen = strlen(password);
-		int fakePasswordLen = strlen(fakePasswordBuf);
-		int minPasswordLen = min(passwordLen, fakePasswordLen); // don't have gcc's typeof helper macro here, so we do this
-		if (strncmp(password, fakePasswordBuf, minPasswordLen, false) == 0) {
+		if (strcmp(password, fakePasswordBuf, true) == 0) {
 			PrintToServer("Joined via password");
 			return;
 		}
