@@ -19,20 +19,20 @@
 
 #define RGL_DIV_INVITE 0x1
 #define RGL_DIV_1 0x2
-#define RGL_DIV_2 0x4
-#define RGL_DIV_MAIN 0x8
-#define RGL_DIV_INT 0x10
-#define RGL_DIV_AMA 0x20
-#define RGL_DIV_NEW 0x40
-#define RGL_DIV_ALL (RGL_DIV_INVITE | RGL_DIV_1 | RGL_DIV_2  | RGL_DIV_MAIN | RGL_DIV_INT | RGL_DIV_AMA | RGL_DIV_NEW)
+#define RGL_DIV_2 0x3
+#define RGL_DIV_MAIN 0x4
+#define RGL_DIV_INT 0x5
+#define RGL_DIV_AMA 0x6
+#define RGL_DIV_NEW 0x7
+#define RGL_DIV_ALL "1,2,3,4,5,6,7"
 
 // idk how etf2l works now, lowest tier I saw was 4
 #define ETF2L_DIV_PREM 0x1
 #define ETF2L_DIV_1 0x2
-#define ETF2L_DIV_2 0x4
-#define ETF2L_DIV_3 0x8
-#define ETF2L_DIV_4 0x10
-#define ETF2L_DIV_ALL (ETF2L_DIV_PREM | ETF2L_DIV_1 | ETF2L_DIV_2 | ETF2L_DIV_3 | ETF2L_DIV_4)
+#define ETF2L_DIV_2 0x3
+#define ETF2L_DIV_3 0x4
+#define ETF2L_DIV_4 0x5
+#define ETF2L_DIV_ALL "1,2,3,4,5"
 
 #define MODE_TEAMONLY 0x0
 #define MODE_SCRIM 0x1
@@ -84,10 +84,10 @@ public OnPluginStart()
 	g_leaguesAllowed = CreateConVar("plw_leagues", macro_int_buf, "The leagues to check potential joiners may be in (or operator); 1 = RGL, 2 = ETF2L");
 
 	IntToString(RGL_DIV_ALL, macro_int_buf, 64);
-	g_rglDivsAllowed = CreateConVar("plw_divs_rgl", macro_int_buf, "Allowed division players (or operator): 1 = invite, 2 = div1, 4 = div2, 8 = main, 16 = intermediate, 32 = amateur, 64 = newcomer");
+	g_rglDivsAllowed = CreateConVar("plw_divs_rgl", macro_int_buf, "Allowed division players (comma separated): 1 = invite, 2 = div1, 3 = div2, 4 = main, 5 = intermediate, 6 = amateur, 7 = newcomer");
 	
 	IntToString(ETF2L_DIV_ALL, macro_int_buf, 64);
-	g_etf2lDivsAllowed = CreateConVar("plw_divs_etf2l", macro_int_buf, "Allowed division players (or operator): 1 = prem, 2 = div1, 4 = div2, 8 = div3, 16 = div4");
+	g_etf2lDivsAllowed = CreateConVar("plw_divs_etf2l", macro_int_buf, "Allowed division players (comma separated): 1 = prem, 2 = div1, 3 = div2, 4 = div3, 5 = div4");
 
 	IntToString(MODE_ALL, macro_int_buf, 64);
 	g_serverMode = CreateConVar("plw_mode", macro_int_buf, "Determines who can join - 0 = only team, 1 = team + scrim, 2 = team + match, 3 = team + scrim + match, 4 = all");
@@ -292,11 +292,12 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 		strcopy(divisionNameTeamID[2], 2, "-1");
 	}
 	if (div == 0 && GetConVarInt(g_allowBannedPlayers) == 1) {
-		PrintToChatAll("Player %s (league banned) is joining", divisionNameTeamID[1]);
+		PrintToChatAll("Player %s (%s league banned) is joining", league == LEAGUE_RGL ? "RGL" : "ETF2L", divisionNameTeamID[1]);
 		return;
 	}
-
-	if ((div & GetConVarInt(league == LEAGUE_RGL ? g_rglDivsAllowed : g_etf2lDivsAllowed)) == 0) {
+	char divs[64];
+	GetConVarString(league == LEAGUE_RGL ? g_rglDivsAllowed : g_etf2lDivsAllowed, divs, 64);
+	if (StrContains(divs, IntToString(div), false) == -1) {
         PrintToChatAll("RGL player %s tried to join", divisionNameTeamID[1]);
 		KickClient(client, "You are not an %s player in the currently whitelisted divisions", league == LEAGUE_RGL ? "RGL" : "ETF2L");
 		return;
@@ -387,17 +388,18 @@ public void OnClientAuthorized(int client, const char[] auth)
 {
 	// TODO more STV testing
 	if (IsClientSourceTV(client)) {
+		PrintToServer("STV joined");
 		return;
 	}
 
 	char steamID[STEAMID_LENGTH];
 	GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
-	PrintToServer("steamid %s connected", steamID);
+	PrintToServer("------steamid %s connected", steamID);
 
 	// Client's password
 	char password[256];
 	GetClientInfo(client, FAKE_PASSWORD_VAR, password, 256);
-	PrintToServer("Inputted 'pass': %s", password);
+	PrintToServer("------Inputted 'pass': %s", password);
 
 	// Server controlled password
 	char fakePasswordBuf[256];
