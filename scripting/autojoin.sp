@@ -133,7 +133,7 @@ public void CVarChangeBanCheck(ConVar cvar, const char[] oldvalue, const char[] 
 		return;
 	}
 
-	PrintToChatAll("[SM]: Banned players %sallowed in server", int_newvalue == 1 ? "", "not ");
+	PrintToChatAll("[SM]: Banned players%sallowed in server", int_newvalue == 1 ? " " : " not ");
 }
 
 public void CVarChangeGamemode(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
@@ -187,19 +187,14 @@ public void CVarChangeMode(ConVar cvar, const char[] oldvalue, const char[] newv
 	switch(int_newvalue) {
 		case MODE_TEAMONLY:
 			PrintToChatAll("[SM]: Only home team allowed");
-			break;
 		case MODE_SCRIM:
 			PrintToChatAll("[SM]: Only home team + scrim team allowed");
-			break;
 		case MODE_MATCH:
 			PrintToChatAll("[SM]: Only home team + match team allowed");
-			break;
 		case MODE_MATCH | MODE_SCRIM:
 			PrintToChatAll("[SM]: Only home team, match team, and scrim team allowed");
-			break;
 		case MODE_ALL:
 			PrintToChatAll("[SM]: Default all player allowed mode");
-			break;
 	}
 }
 
@@ -295,10 +290,16 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 		PrintToChatAll("Player %s (%s league banned) is joining", league == LEAGUE_RGL ? "RGL" : "ETF2L", divisionNameTeamID[1]);
 		return;
 	}
+<<<<<<< HEAD
 	char divs[64];
 	GetConVarString(league == LEAGUE_RGL ? g_rglDivsAllowed : g_etf2lDivsAllowed, divs, 64);
 	if (StrContains(divs, IntToString(div), false) == -1) {
         PrintToChatAll("RGL player %s tried to join", divisionNameTeamID[1]);
+=======
+
+	if ((div & GetConVarInt(league == LEAGUE_RGL ? g_rglDivsAllowed : g_etf2lDivsAllowed)) == 0) {
+        	PrintToChatAll("RGL player %s tried to join", divisionNameTeamID[1]);
+>>>>>>> ff9e843706859cbfda274a7c74bf701aa1832a5d
 		KickClient(client, "You are not an %s player in the currently whitelisted divisions", league == LEAGUE_RGL ? "RGL" : "ETF2L");
 		return;
 	}
