@@ -108,7 +108,7 @@ public OnPluginStart()
 	g_ringerPassword = CreateConVar("plw_fakepw", DEFAULT_FAKE_PW, "The password that ringers / specs can use to join - max length of 255");
 
 	HookEvent("player_disconnect", plLeave, EventHookMode_Pre);
-    HookConVarChange(g_useWhitelist, CVarChangeEnabled);
+    	HookConVarChange(g_useWhitelist, CVarChangeEnabled);
 	HookConVarChange(g_allowBannedPlayers, CVarChangeBanCheck);
 	HookConVarChange(g_gamemode, CVarChangeGamemode);
 	HookConVarChange(g_leaguesAllowed, CVarChangeLeagues);
@@ -131,6 +131,7 @@ public Action plLeave(Event event, const char[] name, bool dontBroadcast) {
 }
 
 public void CVarChangeEnabled(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+        PrintToServer("%c", newvalue[0]);
 	if (strlen(newvalue) != 1 || (newvalue[0] != '0' && newvalue[0] != '1')) {
 		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (on)");
 		SetConVarString(cvar, "1");
@@ -248,7 +249,7 @@ public void CVarChangeMode(ConVar cvar, const char[] oldvalue, const char[] newv
 public void CVarChangeID(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
 	int int_newvalue = StringToInt(newvalue);
 	int int_oldvalue = StringToInt(oldvalue);
-	if (int_newvalue == 0) {
+	if (int_newvalue <= 0) {
 		PrintToChatAll("[SM]: Invalid new ID, reinput a valid one. Resetting to 0");
 		SetConVarString(cvar, "0");
 		return;
