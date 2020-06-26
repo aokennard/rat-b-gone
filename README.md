@@ -27,6 +27,7 @@ This plugin restricts who can join a server based on a few variables.
 - `plw_enable`: Whether or not to use the whitelist  
 - `plw_leagues`: What leagues (RGL, ETF2L) to consider players in to be able to join.  
 - `plw_gamemode`: What gamemode (6s or HL) to consider players for  
+- `plw_chat_output`: Whether or not to let the plugin print to server chat - TODO mask kick messages 
 - `plw_allow_banned`: Whether to allow league banned players into the server. Note, because they aren't guaranteed to have a team / div, they bypass `plw_mode` and `plw_divs_(rgl/etf2l)` settings.   
 - `plw_divs_(rgl/etf2l)`: What division players are allowed into the server. This is all by default, and considered first before other filters.  
 - `plw_mode`: Filters who can join the server based on various 'modes': team-only, scrim-only, team-only, combinations of these, or all.  
@@ -39,4 +40,5 @@ Moving plugin file locations to be less invasive (just sitting in SM root curren
 More support + testing for specific gamemodes (6s, HL, etc)  
 More ETF2L testing (thanks Zesty!)
 Fix multiple people joining (?)
+Check edgecases to prevent server admin error, generally add more constants
 
