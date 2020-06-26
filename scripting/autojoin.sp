@@ -131,7 +131,7 @@ public Action plLeave(Event event, const char[] name, bool dontBroadcast) {
 }
 
 public void CVarChangeEnabled(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
-	if (strlen(newvalue) != 1 || newvalue[0] != '0' || newvalue[0] != '1') {
+	if (strlen(newvalue) != 1 || (newvalue[0] != '0' && newvalue[0] != '1')) {
 		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (on)");
 		SetConVarString(cvar, "1");
 		return;
@@ -147,9 +147,9 @@ public void CVarChangeEnabled(ConVar cvar, const char[] oldvalue, const char[] n
 }
 
 public void CVarChangeBanCheck(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
-	if (strlen(newvalue) != 1 || newvalue[0] != '0' || newvalue[0] != '1') {
+	if (strlen(newvalue) != 1 || (newvalue[0] != '0' && newvalue[0] > '1')) {
 		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (on)");
-		SetConVarString(cvar, "1");
+		SetConVarString(cvar, "0");
 		return;
 	}
 
@@ -164,7 +164,7 @@ public void CVarChangeBanCheck(ConVar cvar, const char[] oldvalue, const char[] 
 
 public void CVarChangeGamemode(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
 	// make better value checking for HL/6s
-	if (strlen(newvalue) != 1 || newvalue[0] != '1' || newvalue[0] != '2') {
+	if (strlen(newvalue) != 1 || (newvalue[0] != '1' && newvalue[0] != '2')) {
 		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (6s)");
 		SetConVarString(cvar, "2");
 		return;
@@ -181,7 +181,7 @@ public void CVarChangeGamemode(ConVar cvar, const char[] oldvalue, const char[] 
 public void CVarChangeLeagues(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
 	int int_newvalue = StringToInt(newvalue);
 	int int_oldvalue = StringToInt(oldvalue);
-	if (int_newvalue == 0) {
+	if (int_newvalue == 0 || int_newvalue < 0 || int_newvalue > 3) {
 		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (RGL+ETF2L)");
 		SetConVarString(cvar, "3");
 		return;
@@ -197,6 +197,7 @@ public void CVarChangeLeagues(ConVar cvar, const char[] oldvalue, const char[] n
 
 }
 
+// TODO fix to use explodestring
 public void CVarChangeDivs(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
 	if (strcmp(oldvalue, newvalue, true) != 0) {
 		if (GetConVarBool(g_allowChatMessages))
