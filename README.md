@@ -6,9 +6,10 @@ A SourcePawn plugin that verifies connecting players play in RGL / ETF2L TF2 lea
 This uses Metamod/SourceMod, a SourcePawn plugin, and Python 3. It was designed and tested on Ubuntu 16.04.
 
 ### Python 3
-This uses Python's BeautifulSoup and lxml module, the other libraries are standard.  
+This uses Python 3's BeautifulSoup and lxml module, the other libraries are standard.  
 Install with:  
 `pip install -r requirements.txt` or `pip3 install -r requirements.txt` if using both versions of pip.
+The plugin expects `python3` in your PATH.
 
 ### SourcePawn
 
@@ -38,7 +39,5 @@ This plugin restricts who can join a server based on a few variables.
 
 Moving plugin file locations to be less invasive (just sitting in SM root currently)  
 More support + testing for specific gamemodes (6s, HL, etc)  
-More ETF2L testing (thanks Zesty!)
-Fix multiple people joining (?)
-Check edgecases to prevent server admin error, generally add more constants
-
+More ETF2L testing (thanks Zesty!)  
+Fix multiple people joining (?)  

@@ -16,7 +16,8 @@
 #define DEFAULT_FAKE_PW "ringer"
 
 #define STEAMID_LENGTH 32
-
+#define MAX_PASSWORD_LENGTH 255
+#define DEFAULT_BUFFER_SIZE 512
 
 #define MAX_DIV_CHAR '7'
 #define RGL_DIV_INVITE 0x1
@@ -104,10 +105,10 @@ public OnPluginStart()
 	// I could technically scrape these off of a website but that sounds awful
 	g_matchID = CreateConVar("plw_matchid", "0", "ID of match team - sometimes allowed");
 
-	g_ringerPassword = CreateConVar("plw_fakepw", DEFAULT_FAKE_PW, "The password that ringers / specs can use to join");
+	g_ringerPassword = CreateConVar("plw_fakepw", DEFAULT_FAKE_PW, "The password that ringers / specs can use to join - max length of 255");
 
 	HookEvent("player_disconnect", plLeave, EventHookMode_Pre);
-        HookConVarChange(g_useWhitelist, CVarChangeEnabled);
+    HookConVarChange(g_useWhitelist, CVarChangeEnabled);
 	HookConVarChange(g_allowBannedPlayers, CVarChangeBanCheck);
 	HookConVarChange(g_gamemode, CVarChangeGamemode);
 	HookConVarChange(g_leaguesAllowed, CVarChangeLeagues);
@@ -130,6 +131,12 @@ public Action plLeave(Event event, const char[] name, bool dontBroadcast) {
 }
 
 public void CVarChangeEnabled(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	if (strlen(newvalue) != 1 || newvalue[0] != '0' || newvalue[0] != '1') {
+		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (on)");
+		SetConVarString(cvar, "1");
+		return;
+	}
+
 	int int_newvalue = StringToInt(newvalue);
 	int int_oldvalue = StringToInt(oldvalue);
 	if (int_newvalue == int_oldvalue) {
@@ -140,6 +147,12 @@ public void CVarChangeEnabled(ConVar cvar, const char[] oldvalue, const char[] n
 }
 
 public void CVarChangeBanCheck(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	if (strlen(newvalue) != 1 || newvalue[0] != '0' || newvalue[0] != '1') {
+		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (on)");
+		SetConVarString(cvar, "1");
+		return;
+	}
+
 	int int_newvalue = StringToInt(newvalue);
 	int int_oldvalue = StringToInt(oldvalue);
 	if (int_newvalue == int_oldvalue) {
@@ -150,6 +163,12 @@ public void CVarChangeBanCheck(ConVar cvar, const char[] oldvalue, const char[] 
 }
 
 public void CVarChangeGamemode(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	// make better value checking for HL/6s
+	if (strlen(newvalue) != 1 || newvalue[0] != '1' || newvalue[0] != '2') {
+		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (6s)");
+		SetConVarString(cvar, "2");
+		return;
+	}
 	int int_newvalue = StringToInt(newvalue);
 	int int_oldvalue = StringToInt(oldvalue);
 	if (int_newvalue == int_oldvalue) {
@@ -162,6 +181,11 @@ public void CVarChangeGamemode(ConVar cvar, const char[] oldvalue, const char[] 
 public void CVarChangeLeagues(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
 	int int_newvalue = StringToInt(newvalue);
 	int int_oldvalue = StringToInt(oldvalue);
+	if (int_newvalue == 0) {
+		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (RGL+ETF2L)");
+		SetConVarString(cvar, "3");
+		return;
+	}
 	if (int_newvalue == int_oldvalue) {
 		return;
 	}
@@ -178,7 +202,13 @@ public void CVarChangeDivs(ConVar cvar, const char[] oldvalue, const char[] newv
 		if (GetConVarBool(g_allowChatMessages))
 			PrintToChatAll("[SM]: Whitelisted RGL divs:");
 		for (int i = 0; i < strlen(newvalue); i++) {
-			if (newvalue[i] == ',' || newvalue[i] > MAX_DIV_CHAR || newvalue[i] <= '0') continue;
+			if (newvalue[i] == ',') 
+				continue;
+			if (newvalue[i] > MAX_DIV_CHAR || newvalue[i] <= '0') {
+				PrintToChatAll("[SM]: Unknown div sequence, resetting to default all divs");
+				SetConVarString(cvar, cvar == g_rglDivsAllowed ? RGL_DIV_ALL : ETF2L_DIV_ALL);
+				return;
+			}
 			if (GetConVarBool(g_allowChatMessages))
 				PrintToChatAll("[SM]: %s", cvar == g_rglDivsAllowed ? 
 										IntToRGLDivision[(newvalue[i] - '0') - 1] :
@@ -188,6 +218,11 @@ public void CVarChangeDivs(ConVar cvar, const char[] oldvalue, const char[] newv
 }
 
 public void CVarChangeMode(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	if (strlen(newvalue) != 1 || newvalue[0] > '4' || newvalue[0] < '0') {
+		PrintToChatAll("[SM]: Invalid mode, setting to default (all)");
+		SetConVarString(cvar, "4");
+		return;
+	}
 	int int_newvalue = StringToInt(newvalue);
 	int int_oldvalue = StringToInt(oldvalue);
 	if (int_newvalue == int_oldvalue) {
@@ -212,11 +247,16 @@ public void CVarChangeMode(ConVar cvar, const char[] oldvalue, const char[] newv
 public void CVarChangeID(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
 	int int_newvalue = StringToInt(newvalue);
 	int int_oldvalue = StringToInt(oldvalue);
+	if (int_newvalue == 0) {
+		PrintToChatAll("[SM]: Invalid new ID, reinput a valid one. Resetting to 0");
+		SetConVarString(cvar, "0");
+		return;
+	}
 	if (int_newvalue == int_oldvalue) {
 		return;
 	}
 	if (GetConVarBool(g_allowChatMessages))
-		PrintToChatAll("[SM]: %s ID changed to %d", 
+		PrintToChatAll("[SM]: %s ID changed to %d. Do note this isn't verified to be a valid team, doublecheck ID!", 
 							cvar == g_teamID ? "Home team" : 
 							cvar == g_scrimID ? "Scrim team" :
 							cvar == g_matchID ? "Match team" : "Unknown cvar", int_newvalue);
@@ -287,9 +327,9 @@ public int RGLDivisionToInt(char div[64]) {
 }
 
 public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int league) {
-	char pyOutData[256];
+	char pyOutData[DEFAULT_BUFFER_SIZE];
 	char divisionNameTeamID[3][64]; // (div, rgl_name, team id)
-	output.GetOutput(pyOutData, 256);
+	output.GetOutput(pyOutData, sizeof(pyOutData));
 	ExplodeString(pyOutData, ",", divisionNameTeamID, 3, 64);
 
 	PrintToServer("div: %s name: %s teamid: %s", divisionNameTeamID[0], divisionNameTeamID[1], divisionNameTeamID[2]);
@@ -300,11 +340,13 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 		strcopy(divisionNameTeamID[0], 6, "No div");
 		strcopy(divisionNameTeamID[2], 2, "-1");
 	}
+	
 	if (div == 0 && GetConVarBool(g_allowBannedPlayers)) {
 		if (GetConVarBool(g_allowChatMessages))
 			PrintToChatAll("Player %s (%s league banned) is joining", league == LEAGUE_RGL ? "RGL" : "ETF2L", divisionNameTeamID[1]);
 		return;
 	}
+
 	char divs[64];
 	char div_string[64];
 	GetConVarString(league == LEAGUE_RGL ? g_rglDivsAllowed : g_etf2lDivsAllowed, divs, 64);
@@ -342,8 +384,8 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 public void ETF2LGetPlayerDataCallback(bool success, const char[] command, System2ExecuteOutput output, any data) {
 	int client = data;
 	if (!success || output.ExitStatus != 0) {
-		char pyOutData[256];
-		output.GetOutput(pyOutData, 256);
+		char pyOutData[DEFAULT_BUFFER_SIZE];
+		output.GetOutput(pyOutData, sizeof(pyOutData));
 		PrintToServer("output: %s", pyOutData);
 		if (GetConVarInt(g_leaguesAllowed) & LEAGUE_RGL) {
 			KickClient(client, "You are not an RGL or ETF2L player");
@@ -361,10 +403,10 @@ public void GetSMPath(char[] path, int maxLength) {
 }
 
 public void GetETF2LUserByID(const String:steamID[], int client) {
-	char etf2lGetDataCommand[256];
-	char smPath[256];
+	char etf2lGetDataCommand[DEFAULT_BUFFER_SIZE];
+	char smPath[DEFAULT_BUFFER_SIZE];
 	GetSMPath(smPath, sizeof(smPath));
-	Format(etf2lGetDataCommand, 256, "python3 %s/etf2lplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
+	Format(etf2lGetDataCommand, sizeof(etf2lGetDataCommand), "python3 %s/etf2lplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
 	PrintToServer("ETF2L cmd: %s", etf2lGetDataCommand);
 	
 	System2_ExecuteThreaded(ETF2LGetPlayerDataCallback, etf2lGetDataCommand, client);
@@ -375,8 +417,8 @@ public void RGLGetPlayerDataCallback(bool success, const char[] command, System2
 	
 	if (!success || output.ExitStatus != 0) {
 		// failed to get, they aren't in RGL
-		char pyOutData[256];
-		output.GetOutput(pyOutData, 256);
+		char pyOutData[DEFAULT_BUFFER_SIZE];
+		output.GetOutput(pyOutData, sizeof(pyOutData));
 		PrintToServer("output: %s", pyOutData);
 		// etf2l is always checked last unless it's only one
 		if (GetConVarInt(g_leaguesAllowed) & LEAGUE_ETF2L) {
@@ -391,10 +433,10 @@ public void RGLGetPlayerDataCallback(bool success, const char[] command, System2
 }
 
 public void GetRGLUserByID(const String:steamID[], int client) {
-	char rglGetDataCommand[256];
-	char smPath[256];
+	char rglGetDataCommand[DEFAULT_BUFFER_SIZE];
+	char smPath[DEFAULT_BUFFER_SIZE];
 	GetSMPath(smPath, sizeof(smPath));
-	Format(rglGetDataCommand, 256, "python3 %s/rglplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
+	Format(rglGetDataCommand, sizeof(rglGetDataCommand), "python3 %s/rglplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
 	PrintToServer("RGL cmd: %s", rglGetDataCommand);
 
 	System2_ExecuteThreaded(RGLGetPlayerDataCallback, rglGetDataCommand, client);
@@ -413,13 +455,13 @@ public void OnClientAuthorized(int client, const char[] auth)
 	PrintToServer("------steamid %s connected", steamID);
 
 	// Client's password
-	char password[256];
-	GetClientInfo(client, FAKE_PASSWORD_VAR, password, 256);
+	char password[MAX_PASSWORD_LENGTH + 1];
+	GetClientInfo(client, FAKE_PASSWORD_VAR, password, MAX_PASSWORD_LENGTH);
 	PrintToServer("------Inputted 'pass': %s", password);
 
 	// Server controlled password
-	char fakePasswordBuf[256];
-	GetConVarString(g_ringerPassword, fakePasswordBuf, 256);
+	char fakePasswordBuf[MAX_PASSWORD_LENGTH + 1];
+	GetConVarString(g_ringerPassword, fakePasswordBuf, MAX_PASSWORD_LENGTH);
 
 	if (strlen(password) > 0) {
 		if (strcmp(password, fakePasswordBuf, true) == 0) {
