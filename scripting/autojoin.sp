@@ -20,6 +20,7 @@
 #define DEFAULT_BUFFER_SIZE 512
 
 #define MAX_DIV_CHAR '7'
+#define MAX_DIV_INT 7
 #define RGL_DIV_INVITE 0x1
 #define RGL_DIV_1 0x2
 #define RGL_DIV_2 0x3
@@ -108,7 +109,7 @@ public OnPluginStart()
 	g_ringerPassword = CreateConVar("plw_fakepw", DEFAULT_FAKE_PW, "The password that ringers / specs can use to join - max length of 255");
 
 	HookEvent("player_disconnect", plLeave, EventHookMode_Pre);
-    	HookConVarChange(g_useWhitelist, CVarChangeEnabled);
+	HookConVarChange(g_useWhitelist, CVarChangeEnabled);
 	HookConVarChange(g_allowBannedPlayers, CVarChangeBanCheck);
 	HookConVarChange(g_gamemode, CVarChangeGamemode);
 	HookConVarChange(g_leaguesAllowed, CVarChangeLeagues);
@@ -130,7 +131,7 @@ public Action plLeave(Event event, const char[] name, bool dontBroadcast) {
 	return Plugin_Continue;
 }
 
-public void CVarChangeEnabled(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+public void ConVarChangeEnabled(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
 	if (strlen(newvalue) != 1 || (newvalue[0] != '0' && newvalue[0] != '1')) {
 		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (on)");
 		SetConVarString(cvar, "1");
@@ -146,7 +147,7 @@ public void CVarChangeEnabled(ConVar cvar, const char[] oldvalue, const char[] n
 		PrintToChatAll("[SM]: Player whitelist %s", int_newvalue == 1 ? "enabled" : "disabled");
 }
 
-public void CVarChangeBanCheck(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+public void ConVarChangeBanCheck(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
 	if (strlen(newvalue) != 1 || (newvalue[0] != '0' && newvalue[0] > '1')) {
 		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (on)");
 		SetConVarString(cvar, "0");
@@ -162,7 +163,7 @@ public void CVarChangeBanCheck(ConVar cvar, const char[] oldvalue, const char[] 
 		PrintToChatAll("[SM]: Banned players%sallowed in server", int_newvalue == 1 ? " " : " not ");
 }
 
-public void CVarChangeGamemode(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+public void ConVarChangeGamemode(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
 	// make better value checking for HL/6s
 	if (strlen(newvalue) != 1 || (newvalue[0] != '1' && newvalue[0] != '2')) {
 		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (6s)");
@@ -178,7 +179,7 @@ public void CVarChangeGamemode(ConVar cvar, const char[] oldvalue, const char[] 
 		PrintToChatAll("[SM]: %s based whitelist", int_newvalue == GAMEMODE_HL ? "HL" : int_newvalue == GAMEMODE_6S ? "6s" : "Unknown");
 }
 
-public void CVarChangeLeagues(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+public void ConVarChangeLeagues(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
 	int int_newvalue = StringToInt(newvalue);
 	int int_oldvalue = StringToInt(oldvalue);
 	if (int_newvalue == 0 || int_newvalue < 0 || int_newvalue > 3) {
@@ -197,28 +198,36 @@ public void CVarChangeLeagues(ConVar cvar, const char[] oldvalue, const char[] n
 
 }
 
-// TODO fix to use explodestring
-public void CVarChangeDivs(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+public void ConVarChangeDivs(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
 	if (strcmp(oldvalue, newvalue, true) != 0) {
-		if (GetConVarBool(g_allowChatMessages))
-			PrintToChatAll("[SM]: Whitelisted RGL divs:");
+		// error checking
 		for (int i = 0; i < strlen(newvalue); i++) {
 			if (newvalue[i] == ',') 
 				continue;
 			if (newvalue[i] > MAX_DIV_CHAR || newvalue[i] <= '0') {
-				PrintToChatAll("[SM]: Unknown div sequence, resetting to default all divs");
+				if (GetConVarBool(g_allowChatMessages))
+					PrintToChatAll("[SM]: Unknown div sequence, resetting to default all divs");
 				SetConVarString(cvar, cvar == g_rglDivsAllowed ? RGL_DIV_ALL : ETF2L_DIV_ALL);
 				return;
 			}
+			
+		}
+		if (GetConVarBool(g_allowChatMessages))
+			PrintToChatAll("[SM]: Whitelisted RGL divs:");
+		char[MAX_DIV_INT][64] split_buffer;
+		int n_divs = ExplodeString(newvalue, ",", split_buffer, MAX_DIV_INT, 64, false);
+		for (int i = 0; i < n_divs; i++) {
+			if (strlen(split_buffer[i]) != 1) 
+				continue;
 			if (GetConVarBool(g_allowChatMessages))
 				PrintToChatAll("[SM]: %s", cvar == g_rglDivsAllowed ? 
-										IntToRGLDivision[(newvalue[i] - '0') - 1] :
-										IntToETF2LDivision[(newvalue[i] - '0') - 1]);
+										IntToRGLDivision[(split_buffer[i][0] - '0') - 1] :
+										IntToETF2LDivision[(split_buffer[i][0] - '0') - 1]);
 		}
 	}
 }
 
-public void CVarChangeMode(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+public void ConVarChangeMode(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
 	if (strlen(newvalue) != 1 || newvalue[0] > '4' || newvalue[0] < '0') {
 		PrintToChatAll("[SM]: Invalid mode, setting to default (all)");
 		SetConVarString(cvar, "4");
@@ -245,7 +254,7 @@ public void CVarChangeMode(ConVar cvar, const char[] oldvalue, const char[] newv
 	}
 }
 
-public void CVarChangeID(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+public void ConVarChangeID(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
 	int int_newvalue = StringToInt(newvalue);
 	int int_oldvalue = StringToInt(oldvalue);
 	if (int_newvalue <= 0) {
@@ -263,7 +272,7 @@ public void CVarChangeID(ConVar cvar, const char[] oldvalue, const char[] newval
 							cvar == g_matchID ? "Match team" : "Unknown cvar", int_newvalue);
 }
 
-public void CVarChangeFakePW(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+public void ConVarChangeFakePW(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
 	if (strcmp(oldvalue, newvalue, true) != 0) {
 		if (GetConVarBool(g_allowChatMessages))
 			PrintToChatAll("[SM]: Changed ringer/spec password");
