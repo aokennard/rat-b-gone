@@ -131,7 +131,6 @@ public Action plLeave(Event event, const char[] name, bool dontBroadcast) {
 }
 
 public void CVarChangeEnabled(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
-        PrintToServer("%c", newvalue[0]);
 	if (strlen(newvalue) != 1 || (newvalue[0] != '0' && newvalue[0] != '1')) {
 		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (on)");
 		SetConVarString(cvar, "1");
@@ -250,8 +249,8 @@ public void CVarChangeID(ConVar cvar, const char[] oldvalue, const char[] newval
 	int int_newvalue = StringToInt(newvalue);
 	int int_oldvalue = StringToInt(oldvalue);
 	if (int_newvalue <= 0) {
-		PrintToChatAll("[SM]: Invalid new ID, reinput a valid one. Resetting to 0");
-		SetConVarString(cvar, "0");
+		PrintToChatAll("[SM]: Invalid new ID, reinput a valid one. Resetting to 1");
+		SetConVarString(cvar, "1");
 		return;
 	}
 	if (int_newvalue == int_oldvalue) {
