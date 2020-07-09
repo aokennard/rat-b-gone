@@ -34,10 +34,11 @@ This plugin restricts who can join a server based on a few variables.
 - `plw_mode`: Filters who can join the server based on various 'modes': team-only, scrim-only, team-only, combinations of these, or all.  
 - `plw_(scrim/team/match)id`: The ID of an RGL team, to be used for `plw_mode`'s, allowing only certain teams of players into the server.  
 - `plw_fakepw`: In order to allow ringers to join (in case of scrim/team/match restrictions), they need to use a 'password' - due to protected variables not being exposed (client's `password`), we use another variable: `cl_team`.
+- `plw_pugmode`: Disables whitelist (assumes not everyone in RGL), sets a default `sv_password`  
 
 ## WIP
 
 Moving plugin file locations to be less invasive (just sitting in SM root currently)  
 More support + testing for specific gamemodes (6s, HL, etc)  
 More ETF2L testing (thanks Zesty!)  
-Fix multiple people joining (?)  
+Fix multiple people joining causing RGL div output to stop  

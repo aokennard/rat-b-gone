@@ -14,6 +14,7 @@
 
 #define FAKE_PASSWORD_VAR "cl_team"
 #define DEFAULT_FAKE_PW "ringer"
+#define DEFAULT_PASSWORD "pugmodepw"
 
 #define STEAMID_LENGTH 32
 #define MAX_PASSWORD_LENGTH 255
@@ -62,6 +63,7 @@ ConVar g_leaguesAllowed;
 ConVar g_gamemode;
 ConVar g_allowBannedPlayers;
 ConVar g_allowChatMessages;
+ConVar g_pugMode;
 
 char IntToETF2LDivision[5][] = {"Prem", "Division 1", "Division 2", "Division 3", "Division 4"};
 char IntToRGLDivision[7][] = {"Invite", "Division 1", "Division 2", "Main", "Intermediate", "Amateur", "Newcomer"};
@@ -83,6 +85,9 @@ public OnPluginStart()
 	g_useWhitelist = CreateConVar("plw_enable", "1", "Toggles the use of the competitive filter");
 
 	g_allowChatMessages = CreateConVar("plw_chat_output", "1", "Toggles the plugin printing to chat on join/kick");
+
+	// pug mode requires a password, because people might not play in RGL. 
+	g_pugMode = CreateConVar("plw_pugmode", "0", "Toggles whether or not the server is in pug-mode (plw_enable 0; sv_password <default_password>)");
 
 	g_allowBannedPlayers = CreateConVar("plw_allow_banned", "0", "Allow banned players to play in the server");
 
@@ -109,17 +114,18 @@ public OnPluginStart()
 	g_ringerPassword = CreateConVar("plw_fakepw", DEFAULT_FAKE_PW, "The password that ringers / specs can use to join - max length of 255");
 
 	HookEvent("player_disconnect", plLeave, EventHookMode_Pre);
-	HookConVarChange(g_useWhitelist, CVarChangeEnabled);
-	HookConVarChange(g_allowBannedPlayers, CVarChangeBanCheck);
-	HookConVarChange(g_gamemode, CVarChangeGamemode);
-	HookConVarChange(g_leaguesAllowed, CVarChangeLeagues);
-	HookConVarChange(g_rglDivsAllowed, CVarChangeDivs);
-	HookConVarChange(g_etf2lDivsAllowed, CVarChangeDivs);
-	HookConVarChange(g_serverMode, CVarChangeMode);
-	HookConVarChange(g_teamID, CVarChangeID);
-	HookConVarChange(g_scrimID, CVarChangeID);
-	HookConVarChange(g_matchID, CVarChangeID);
-	HookConVarChange(g_ringerPassword, CVarChangeFakePW);
+	HookConVarChange(g_useWhitelist, ConVarChangeEnabled);
+	HookConVarChange(g_allowBannedPlayers, ConVarChangeBanCheck);
+	HookConVarChange(g_gamemode, ConVarChangeGamemode);
+	HookConVarChange(g_leaguesAllowed, ConVarChangeLeagues);
+	HookConVarChange(g_rglDivsAllowed, ConVarChangeDivs);
+	HookConVarChange(g_etf2lDivsAllowed, ConVarChangeDivs);
+	HookConVarChange(g_serverMode, ConVarChangeMode);
+	HookConVarChange(g_teamID, ConVarChangeID);
+	HookConVarChange(g_scrimID, ConVarChangeID);
+	HookConVarChange(g_matchID, ConVarChangeID);
+	HookConVarChange(g_ringerPassword, ConVarChangeFakePW);
+	HookConVarChange(g_pugMode, ConVarChangePug);
 	
 	PrintToServer("Competitive Player Whitelist loaded");
 }
@@ -129,6 +135,30 @@ public Action plLeave(Event event, const char[] name, bool dontBroadcast) {
 	PrintToServer("plLeave event: %s", name);
 	SetEventBroadcast(event, true);
 	return Plugin_Continue;
+}
+
+public void ConVarChangePug(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	if (strlen(newvalue) != 1 || (newvalue[0] != '0' && newvalue[0] != '1')) {
+		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (off)");
+		SetConVarString(cvar, "0");
+		return;
+	}
+	int int_newvalue = StringToInt(newvalue);
+	int int_oldvalue = StringToInt(oldvalue);
+	if (int_newvalue == int_oldvalue) {
+		return;
+	}
+	if (int_newvalue == 1) {
+		SetConVarString(g_useWhitelist, "0");
+		// set to whatever you want server pw to be, this is just a placeholder
+		SetConVarString(FindConVar("sv_password"), DEFAULT_PASSWORD);
+	}
+	if (int_newvalue == 0) {
+		SetConVarString(g_useWhitelist, "1");
+		SetConVarString(FindConVar("sv_password"), "");
+	}
+	if (GetConVarBool(g_allowChatMessages))
+		PrintToChatAll("[SM]: Pug mode %s", int_newvalue == 1 ? "enabled" : "disabled");
 }
 
 public void ConVarChangeEnabled(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
@@ -372,16 +402,17 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 		if (StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_teamID)) {
    			PrintJoinString(divisionNameTeamID[1], divisionNameTeamID[0], league);
 		} else {
-			
 			if (GetConVarBool(g_allowChatMessages))
 				PrintToChatAll("RGL player %s tried to join", divisionNameTeamID[1]);
 			KickClient(client, "You aren't currently in the team whitelist");
 		}
 	} else if (MODE_ALL & GetConVarInt(g_serverMode)) {
 		PrintJoinString(divisionNameTeamID[1], divisionNameTeamID[0], league);
-	} else if (MODE_SCRIM & GetConVarInt(g_serverMode) && StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_scrimID)) {
+	} else if (MODE_SCRIM & GetConVarInt(g_serverMode) && (StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_scrimID) || 
+														   StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_teamID))) {
 		PrintJoinString(divisionNameTeamID[1], divisionNameTeamID[0], league);
-	} else if (MODE_MATCH & GetConVarInt(g_serverMode) && StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_matchID)) {
+	} else if (MODE_MATCH & GetConVarInt(g_serverMode) && (StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_matchID) || 
+														   StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_teamID))) {
 		PrintJoinString(divisionNameTeamID[1], divisionNameTeamID[0], league);
 	} else {
 		// deny all here
@@ -408,18 +439,16 @@ public void ETF2LGetPlayerDataCallback(bool success, const char[] command, Syste
 }
 
 public void GetSMPath(char[] path, int maxLength) {
+	// System2_GetGameDir?
 	System2_Execute(path, maxLength, "echo -n $SOURCEMOD_ROOT");
 	PrintToServer("%s path", path);
 }
 
 public void GetETF2LUserByID(const String:steamID[], int client) {
-	char etf2lGetDataCommand[DEFAULT_BUFFER_SIZE];
 	char smPath[DEFAULT_BUFFER_SIZE];
 	GetSMPath(smPath, sizeof(smPath));
-	Format(etf2lGetDataCommand, sizeof(etf2lGetDataCommand), "python3 %s/etf2lplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
-	PrintToServer("ETF2L cmd: %s", etf2lGetDataCommand);
-	
-	System2_ExecuteThreaded(ETF2LGetPlayerDataCallback, etf2lGetDataCommand, client);
+	System2_ExecuteFormattedThreaded(ETF2LGetPlayerDataCallback, client, 
+									"python3 %s/etf2lplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
 }
 
 public void RGLGetPlayerDataCallback(bool success, const char[] command, System2ExecuteOutput output, any data) {
@@ -443,13 +472,9 @@ public void RGLGetPlayerDataCallback(bool success, const char[] command, System2
 }
 
 public void GetRGLUserByID(const String:steamID[], int client) {
-	char rglGetDataCommand[DEFAULT_BUFFER_SIZE];
 	char smPath[DEFAULT_BUFFER_SIZE];
 	GetSMPath(smPath, sizeof(smPath));
-	Format(rglGetDataCommand, sizeof(rglGetDataCommand), "python3 %s/rglplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
-	PrintToServer("RGL cmd: %s", rglGetDataCommand);
-
-	System2_ExecuteThreaded(RGLGetPlayerDataCallback, rglGetDataCommand, client);
+	System2_ExecuteThreaded(RGLGetPlayerDataCallback, client, "python3 %s/rglplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
 }
 
 public void OnClientAuthorized(int client, const char[] auth)
