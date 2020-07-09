@@ -244,7 +244,7 @@ public void ConVarChangeDivs(ConVar cvar, const char[] oldvalue, const char[] ne
 		}
 		if (GetConVarBool(g_allowChatMessages))
 			PrintToChatAll("[SM]: Whitelisted RGL divs:");
-		char[MAX_DIV_INT][64] split_buffer;
+		char split_buffer[MAX_DIV_INT][64];
 		int n_divs = ExplodeString(newvalue, ",", split_buffer, MAX_DIV_INT, 64, false);
 		for (int i = 0; i < n_divs; i++) {
 			if (strlen(split_buffer[i]) != 1) 
@@ -474,7 +474,7 @@ public void RGLGetPlayerDataCallback(bool success, const char[] command, System2
 public void GetRGLUserByID(const String:steamID[], int client) {
 	char smPath[DEFAULT_BUFFER_SIZE];
 	GetSMPath(smPath, sizeof(smPath));
-	System2_ExecuteThreaded(RGLGetPlayerDataCallback, client, "python3 %s/rglplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
+	System2_ExecuteFormattedThreaded(RGLGetPlayerDataCallback, client, "python3 %s/rglplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
 }
 
 public void OnClientAuthorized(int client, const char[] auth)
