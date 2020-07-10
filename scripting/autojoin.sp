@@ -63,10 +63,18 @@ ConVar g_leaguesAllowed;
 ConVar g_gamemode;
 ConVar g_allowBannedPlayers;
 ConVar g_allowChatMessages;
+ConVar g_allowKickedOutput;
 ConVar g_pugMode;
 
 char IntToETF2LDivision[5][] = {"Prem", "Division 1", "Division 2", "Division 3", "Division 4"};
 char IntToRGLDivision[7][] = {"Invite", "Division 1", "Division 2", "Main", "Intermediate", "Amateur", "Newcomer"};
+char KickMessages[7][] = {"You are not an RGL player in the currently whitelisted divisions",
+						 "You are not an ETF2L player in the currently whitelisted divisions",
+						 "You aren't currently in the team whitelist",
+						 "You don't fit the current server's whitelist rules",
+						 "You are not an RGL or ETF2L player",
+						 "You are not an ETF2L player",
+						 "Kicked from server"};
 
 public Plugin:myinfo = {
 	name        = "TF2 Competitive Player Whitelist",
@@ -85,6 +93,8 @@ public OnPluginStart()
 	g_useWhitelist = CreateConVar("plw_enable", "1", "Toggles the use of the competitive filter");
 
 	g_allowChatMessages = CreateConVar("plw_chat_output", "1", "Toggles the plugin printing to chat on join/kick");
+
+	g_allowKickedOutput = CreateConVar("plw_kick_output", "0", "Toggles in-chat kick messages (prevents spamming, usually)");
 
 	// pug mode requires a password, because people might not play in RGL. 
 	g_pugMode = CreateConVar("plw_pugmode", "0", "Toggles whether or not the server is in pug-mode (plw_enable 0; sv_password <default_password>)");
@@ -113,7 +123,7 @@ public OnPluginStart()
 
 	g_ringerPassword = CreateConVar("plw_fakepw", DEFAULT_FAKE_PW, "The password that ringers / specs can use to join - max length of 255");
 
-	HookEvent("player_disconnect", plLeave, EventHookMode_Pre);
+	HookEvent("player_disconnect", KickSilencer, EventHookMode_Pre);
 	HookConVarChange(g_useWhitelist, ConVarChangeEnabled);
 	HookConVarChange(g_allowBannedPlayers, ConVarChangeBanCheck);
 	HookConVarChange(g_gamemode, ConVarChangeGamemode);
@@ -130,14 +140,20 @@ public OnPluginStart()
 	PrintToServer("Competitive Player Whitelist loaded");
 }
 
-// Need to test ability to silence 'kicked' messages
-public Action plLeave(Event event, const char[] name, bool dontBroadcast) {
-	PrintToServer("plLeave event: %s", name);
-	if (!dontBroadcast)
-		SetEventBroadcast(event, true);
-	char disconnectReason[64];
-	GetEventString(event, "reason", disconnectReason, sizeof(disconnectReason));
-	PrintToServer("reason: %s", disconnectReason);
+public Action KickSilencer(Event event, const char[] name, bool dontBroadcast) {
+	if (!GetConVarBool(g_allowKickedOutput)) {
+		char disconnectReason[64];
+		GetEventString(event, "reason", disconnectReason, sizeof(disconnectReason));
+		for (int i = 0; i < 7; i++) {
+			if (strcmp(KickMessages[i], disconnectReason, true) == 0) {
+				if (!dontBroadcast)
+					SetEventBroadcast(event, true);
+				break;
+			}
+		}
+		
+		PrintToServer("reason: %s", disconnectReason);
+	}
 	return Plugin_Continue;
 }
 
