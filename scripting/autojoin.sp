@@ -441,7 +441,7 @@ public void ETF2LGetPlayerDataCallback(bool success, const char[] command, Syste
 public void GetSMPath(char[] path, int maxLength) {
 	char smdir[4096]; // max ext4 path len
 	System2_GetGameDir(smdir, sizeof(smdir));
-	strcat(smdir, 4096, "/addons/sourcemod/");
+	StrCat(smdir, 4096, "/addons/sourcemod/");
 	strcopy(path, maxLength, smdir);
 }
 
