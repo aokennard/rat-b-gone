@@ -439,13 +439,14 @@ public void ETF2LGetPlayerDataCallback(bool success, const char[] command, Syste
 }
 
 public void GetSMPath(char[] path, int maxLength) {
-	// System2_GetGameDir?
-	System2_Execute(path, maxLength, "echo -n $SOURCEMOD_ROOT");
-	PrintToServer("%s path", path);
+	char smdir[4096]; // max ext4 path len
+	System2_GetGameDir(smdir, sizeof(smdir));
+	strcat(smdir, 4096, "/addons/sourcemod/");
+	strcopy(path, maxLength, smdir);
 }
 
 public void GetETF2LUserByID(const String:steamID[], int client) {
-	char smPath[DEFAULT_BUFFER_SIZE];
+	char smPath[4096];
 	GetSMPath(smPath, sizeof(smPath));
 	System2_ExecuteFormattedThreaded(ETF2LGetPlayerDataCallback, client, 
 									"python3 %s/etf2lplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
@@ -472,9 +473,10 @@ public void RGLGetPlayerDataCallback(bool success, const char[] command, System2
 }
 
 public void GetRGLUserByID(const String:steamID[], int client) {
-	char smPath[DEFAULT_BUFFER_SIZE];
+	char smPath[4096];
 	GetSMPath(smPath, sizeof(smPath));
-	System2_ExecuteFormattedThreaded(RGLGetPlayerDataCallback, client, "python3 %s/rglplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
+	System2_ExecuteFormattedThreaded(RGLGetPlayerDataCallback, client, 
+									"python3 %s/rglplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
 }
 
 public void OnClientAuthorized(int client, const char[] auth)
