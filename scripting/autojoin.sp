@@ -133,7 +133,11 @@ public OnPluginStart()
 // Need to test ability to silence 'kicked' messages
 public Action plLeave(Event event, const char[] name, bool dontBroadcast) {
 	PrintToServer("plLeave event: %s", name);
-	SetEventBroadcast(event, true);
+	if (!dontBroadcast)
+		SetEventBroadcast(event, true);
+	char disconnectReason[64];
+	GetEventString(event, "reason", disconnectReason, sizeof(disconnectReason));
+	PrintToServer("reason: %s", disconnectReason);
 	return Plugin_Continue;
 }
 
