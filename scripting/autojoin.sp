@@ -123,6 +123,7 @@ public OnPluginStart()
 
 	g_ringerPassword = CreateConVar("plw_fakepw", DEFAULT_FAKE_PW, "The password that ringers / specs can use to join - max length of 255");
 
+	HookEvent("player_connect", ConnectSilencer, EventHookMode_Pre);
 	HookEvent("player_disconnect", KickSilencer, EventHookMode_Pre);
 	HookConVarChange(g_useWhitelist, ConVarChangeEnabled);
 	HookConVarChange(g_allowBannedPlayers, ConVarChangeBanCheck);
@@ -136,25 +137,48 @@ public OnPluginStart()
 	HookConVarChange(g_matchID, ConVarChangeID);
 	HookConVarChange(g_ringerPassword, ConVarChangeFakePW);
 	HookConVarChange(g_pugMode, ConVarChangePug);
-	
+	HookConVarChange(g_allowKickedOutput, ConVarChangeKick);	
 	PrintToServer("Competitive Player Whitelist loaded");
+}
+
+public Action ConnectSilencer(Event event, const char[] name, bool dontBroadcast) {
+	SetEventBroadcast(event, true);
+	return Plugin_Continue;
 }
 
 public Action KickSilencer(Event event, const char[] name, bool dontBroadcast) {
 	if (!GetConVarBool(g_allowKickedOutput)) {
-		char disconnectReason[64];
-		GetEventString(event, "reason", disconnectReason, sizeof(disconnectReason));
-		for (int i = 0; i < 7; i++) {
-			if (strcmp(KickMessages[i], disconnectReason, true) == 0) {
-				if (!dontBroadcast)
-					SetEventBroadcast(event, true);
-				break;
-			}
-		}
+		if (!dontBroadcast) {
+			char disconnectReason[64];
+			GetEventString(event, "reason", disconnectReason, sizeof(disconnectReason));
 		
-		PrintToServer("reason: %s", disconnectReason);
+			for (int i = 0; i < 7; i++) {
+				if (strcmp(KickMessages[i], disconnectReason, true) == 0) {
+					SetEventBroadcast(event, true);
+					break;
+				}
+			}
+			
+			PrintToServer("reason: %s", disconnectReason);
+		}
 	}
 	return Plugin_Continue;
+}
+
+public void ConVarChangeKick(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	if (strlen(newvalue) != 1 || (newvalue[0] != '0' && newvalue[0] != '1')) {
+		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (off)");
+		SetConVarString(cvar, "0");
+		return;
+	}
+	int int_newvalue = StringToInt(newvalue);
+	int int_oldvalue = StringToInt(oldvalue);
+	if (int_newvalue == int_oldvalue) {
+		return;
+	}
+	if (GetConVarBool(g_allowChatMessages))
+		PrintToChatAll("[SM]: Kick output mode %s", int_newvalue == 1 ? "enabled" : "disabled");
+
 }
 
 public void ConVarChangePug(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
@@ -412,8 +436,8 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 	GetConVarString(league == LEAGUE_RGL ? g_rglDivsAllowed : g_etf2lDivsAllowed, divs, 64);
 	IntToString(div, div_string, 64);
 	if (StrContains(divs, div_string, false) == -1) {	
-		if (GetConVarBool(g_allowChatMessages))
-        		PrintToChatAll("RGL player %s tried to join", divisionNameTeamID[1]);
+		if (GetConVarBool(g_allowKickedOutput) && GetConVarBool(g_allowChatMessages))
+        		PrintToChatAll("%s player %s tried to join", league == LEAGUE_RGL ? "RGL" : "ETF2L", divisionNameTeamID[1]);
 		KickClient(client, "You are not an %s player in the currently whitelisted divisions", league == LEAGUE_RGL ? "RGL" : "ETF2L");
 		return;
 	}
@@ -422,8 +446,8 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 		if (StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_teamID)) {
    			PrintJoinString(divisionNameTeamID[1], divisionNameTeamID[0], league);
 		} else {
-			if (GetConVarBool(g_allowChatMessages))
-				PrintToChatAll("RGL player %s tried to join", divisionNameTeamID[1]);
+			if (GetConVarBool(g_allowKickedOutput) && GetConVarBool(g_allowChatMessages))
+				PrintToChatAll("%s player %s tried to join", league == LEAGUE_RGL ? "RGL" : "ETF2L", divisionNameTeamID[1]);
 			KickClient(client, "You aren't currently in the team whitelist");
 		}
 	} else if (MODE_ALL & GetConVarInt(g_serverMode)) {
@@ -436,8 +460,8 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 		PrintJoinString(divisionNameTeamID[1], divisionNameTeamID[0], league);
 	} else {
 		// deny all here
-		if (GetConVarBool(g_allowChatMessages))
-			PrintToChatAll("RGL player %s tried to join", divisionNameTeamID[1]);
+		if (GetConVarBool(g_allowKickedOutput) && GetConVarBool(g_allowChatMessages))
+			PrintToChatAll("%s player %s tried to join", league == LEAGUE_RGL ? "RGL" : "ETF2L", divisionNameTeamID[1]);	
 		KickClient(client, "You don't fit the current server's whitelist rules");
 	}
 }
