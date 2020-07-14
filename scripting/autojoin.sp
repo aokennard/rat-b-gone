@@ -469,9 +469,9 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 public void ETF2LGetPlayerDataCallback(bool success, const char[] command, System2ExecuteOutput output, any data) {
 	int client = data;
 	if (!success || output.ExitStatus != 0) {
-		char pyOutData[DEFAULT_BUFFER_SIZE];
+		/*char pyOutData[DEFAULT_BUFFER_SIZE];
 		output.GetOutput(pyOutData, sizeof(pyOutData));
-		PrintToServer("output: %s", pyOutData);
+		PrintToServer("output: %s", pyOutData);*/
 		if (GetConVarInt(g_leaguesAllowed) & LEAGUE_RGL) {
 			KickClient(client, "You are not an RGL or ETF2L player");
 		} else {
@@ -501,19 +501,21 @@ public void RGLGetPlayerDataCallback(bool success, const char[] command, System2
 	
 	if (!success || output.ExitStatus != 0) {
 		// failed to get, they aren't in RGL
-		char pyOutData[DEFAULT_BUFFER_SIZE];
+		// Causes exception I guess? TODO
+		/* char pyOutData[DEFAULT_BUFFER_SIZE];
 		output.GetOutput(pyOutData, sizeof(pyOutData));
-		PrintToServer("output: %s", pyOutData);
+		PrintToServer("output: %s", pyOutData); */
 		// etf2l is always checked last unless it's only one
 		if (GetConVarInt(g_leaguesAllowed) & LEAGUE_ETF2L) {
 			char steamID[STEAMID_LENGTH];
 			GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
 			GetETF2LUserByID(steamID, client);
-		}	
+		} else {
+			KickClient(client, "You are not an RGL player");
+		}
 	} else {
 		LeagueSuccessHelper(output, client, LEAGUE_RGL);
 	}
-
 }
 
 public void GetRGLUserByID(const String:steamID[], int client) {
