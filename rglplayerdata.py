@@ -113,8 +113,17 @@ if __name__ == "__main__":
 
     # get and parse the player's page
     request = requests.get(RGL_SEARCH_URL.format(steamid, RGL_SEARCH_LEAGUE_TABLE[gamemode]))
+    if not request:
+        with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
+            f.write("[RGL LOG:] Request failed!")
+        print("request failure")
+        exit(-1)
     soup = BeautifulSoup(request.content, features="lxml")
-
+    if not soup:
+        with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
+            f.write("[RGL LOG:] Soup failure")
+        print("soup fail")
+        exit(-1)
     div_head = soup.find("div", {"class":"col-sm-9"})
     if not div_head:
         with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
