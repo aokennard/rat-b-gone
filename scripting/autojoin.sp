@@ -493,7 +493,7 @@ public void GetETF2LUserByID(const String:steamID[], int client) {
 	char smPath[4096];
 	GetSMPath(smPath, sizeof(smPath));
 	System2_ExecuteFormattedThreaded(ETF2LGetPlayerDataCallback, client, 
-									"python3 %s/etf2lplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
+									"python3 %s/etf2lplayerdata.py %s %d 2>>tempout", smPath, steamID, GetConVarInt(g_gamemode));
 }
 
 public void RGLGetPlayerDataCallback(bool success, const char[] command, System2ExecuteOutput output, any data) {
@@ -522,7 +522,7 @@ public void GetRGLUserByID(const String:steamID[], int client) {
 	char smPath[4096];
 	GetSMPath(smPath, sizeof(smPath));
 	System2_ExecuteFormattedThreaded(RGLGetPlayerDataCallback, client, 
-									"python3 %s/rglplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
+									"python3 %s/rglplayerdata.py %s %d 2>>tempout", smPath, steamID, GetConVarInt(g_gamemode));
 }
 
 public void OnClientAuthorized(int client, const char[] auth)
