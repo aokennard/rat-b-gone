@@ -68,9 +68,12 @@ ConVar g_allowChatMessages;
 ConVar g_allowKickedOutput;
 ConVar g_pugMode;
 ConVar g_leagueResolverURL;
+ConVar g_teamExecCommands;
 
+int g_clientTeams[MAXCLIENTS];
 char g_cURLResponseBuffer[1024];
 char g_sourcemodPath[400];
+
 char IntToETF2LDivision[5][] = {"Prem", "Division 1", "Division 2", "Division 3", "Division 4"};
 char IntToRGLDivision[7][] = {"Invite", "Division 1", "Division 2", "Main", "Intermediate", "Amateur", "Newcomer"};
 char KickMessages[7][] = {"You are not an RGL player in the currently whitelisted divisions",
@@ -96,6 +99,8 @@ public OnPluginStart()
 
 	CreateConVar("plw_version", PLUGIN_VERSION, "Auto-kick whitelist");
 	g_useWhitelist = CreateConVar("plw_enable", "1", "Toggles the use of the competitive filter");
+
+	g_teamExecCommands = CreateConVar("plw_teamexec", "0", "Allows members of plw_teamid to execute server commands");
 
 	g_allowChatMessages = CreateConVar("plw_chat_output", "1", "Toggles the plugin printing to chat on join/kick");
 
@@ -133,6 +138,7 @@ public OnPluginStart()
 	HookEvent("server_spawn", GetGameDirHook);
 	HookEvent("player_connect", ConnectSilencer, EventHookMode_Pre);
 	HookEvent("player_disconnect", KickSilencer, EventHookMode_Pre);
+	RegConsoleCmd("say", TeamSayHook);
 	HookConVarChange(g_useWhitelist, ConVarChangeEnabled);
 	HookConVarChange(g_allowBannedPlayers, ConVarChangeBanCheck);
 	HookConVarChange(g_gamemode, ConVarChangeGamemode);
@@ -146,6 +152,7 @@ public OnPluginStart()
 	HookConVarChange(g_ringerPassword, ConVarChangeFakePW);
 	HookConVarChange(g_pugMode, ConVarChangePug);
 	HookConVarChange(g_allowKickedOutput, ConVarChangeKick);	
+	HookConVarChange(g_teamExecCommands, ConVarChangeExec)
 	PrintToServer("Competitive Player Whitelist loaded");
 }
 
@@ -170,6 +177,23 @@ public Action KickSilencer(Event event, const char[] name, bool dontBroadcast) {
 			PrintToServer("reason: %s", disconnectReason);
 		}
 	}
+	int client = GetClientOfUserId(GetEventInt(event, "userid"))
+	g_clientTeams[client] = -1;
+	return Plugin_Continue;
+}
+
+public Action TeamSayHook(int client, int args) {
+	if (GetConVarBool(g_teamExecCommands) && g_clientTeams[client] == GetConVarInt(g_teamID)) {
+		char command_buffer[128];
+		GetCmdArgString(command_buffer, sizeof(command_buffer));
+		if (command_buffer[0] == '!') {
+			PrintToChatAll("%s", command_buffer[1]);
+			ServerCommand("%s", command_buffer[1]);
+			return Plugin_Handled;
+		} 
+		return Plugin_Continue;
+		
+	}
 	return Plugin_Continue;
 }
 
@@ -183,6 +207,21 @@ public Action GetGameDirHook(Event event, const char[] name, bool dontBroadcast)
 	Format(g_sourcemodPath, sizeof(g_sourcemodPath), "%s\\%s", game, sm_path);
 
 	UnhookEvent("server_spawn", GetGameDirHook);
+}
+
+public void ConVarChangeExec(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	if (strlen(newvalue) != 1 || (newvalue[0] != '0' && newvalue[0] != '1')) {
+		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (off)");
+		SetConVarString(cvar, "0");
+		return;
+	}
+	int int_newvalue = StringToInt(newvalue);
+	int int_oldvalue = StringToInt(oldvalue);
+	if (int_newvalue == int_oldvalue) {
+		return;
+	}
+	if (GetConVarBool(g_allowChatMessages))
+		PrintToChatAll("[SM]: Team Exec mode %s (WARNING: possibly unsafe)", int_newvalue == 1 ? "enabled" : "disabled");
 }
 
 public void ConVarChangeKick(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
@@ -482,6 +521,7 @@ public void LeagueSuccessHelper(int client, int league) {
 			PrintToChatAll("%s player %s tried to join", league == LEAGUE_RGL ? "RGL" : "ETF2L", divisionNameTeamID[1]);	
 		KickClient(client, "You don't fit the current server's whitelist rules");
 	}
+	g_clientTeams[client] = StringToInt(divisionNameTeamID[2]);
 }
 
 public bool get_response_success() {
