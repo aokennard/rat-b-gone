@@ -1,8 +1,5 @@
-# the sole purpose is to get (div, name, current team) from RGL
-import sys
 import os
 import time
-import shutil
 import requests
 try:
     from bs4 import BeautifulSoup
@@ -92,9 +89,9 @@ def get_div_teamid_from_table(table):
     return division, team_id
 
 '''
-    Input: from sys.argv:
-            a connecting users steamid
-            the gamemode we're checking for (currently only supporting 6s and HL)
+    Input:
+        a connecting users steamid
+        the gamemode we're checking for (currently only supporting 6s and HL)
     Output:
         a 3-tuple of (division of joining player, RGL alias, team id for gamemode we're looking for)
         alternatively: ("", RGL alias, "") when no team found
@@ -103,10 +100,7 @@ def get_div_teamid_from_table(table):
 '''
 
 
-if __name__ == "__main__":
-    # we spawned this process - we gave it these arguments guaranteed
-    steamid = sys.argv[1]
-    gamemode = sys.argv[2]
+def get_rgl_data(steamid, gamemode):
 
     if not os.path.exists("plwlog/"):
         os.mkdir("plwlog/")
@@ -116,26 +110,22 @@ if __name__ == "__main__":
     if not request:
         with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
             f.write("[RGL LOG:] Request failed!")
-        print("request failure")
-        exit(-1)
+        return "request failure"
     soup = BeautifulSoup(request.content, features="lxml")
     if not soup:
         with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
             f.write("[RGL LOG:] Soup failure")
-        print("soup fail")
-        exit(-1)
+        return "soup fail"
     div_head = soup.find("div", {"class":"col-sm-9"})
     if not div_head:
         with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
             f.write("[RGL LOG:] sid {} couldn't load div".format(steamid))
-        print("Page malformed or edge case found for pages")
-        exit(-1)
+        return "Page malformed or edge case found for pages"
     div_name = div_head.find("div", {"class":"page-header text-center"})
     if not div_name:
         with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
             f.write("[RGL LOG:] sid {} couldn't load div".format(steamid))
-        print("Page malformed or edge case found for pages")
-        exit(-1)
+        return "Page malformed or edge case found for pages"
 
     # verify they exist
 
@@ -143,20 +133,17 @@ if __name__ == "__main__":
     if not placeholder or placeholder.text.lstrip() == "Player does not exist in RGL":
         with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
             f.write("[RGL LOG:] sid {} not in RGL".format(steamid))
-        print("Player not found")
-        exit(-1)
+        return "Player not found"
 
     name, ban_status = get_name_banstatus_from_div(div_name)
     if name == None:
         with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
             f.write("[RGL LOG:] sid {} name not found in RGL".format(steamid))
-        print("Name not found")
-        exit(-1)
+        return "Name not found"
     if ban_status:
         with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
             f.write("[RGL LOG:] sid {} found, is banned".format(steamid))
-        print(",".join(["banned", name, "banned"]))
-        exit(0)
+        return ",".join(["banned", name, "banned"])
 
     # h3, hr, table is the format repeated
     league_types = div_head.find_all("h3")
@@ -181,18 +168,15 @@ if __name__ == "__main__":
     else:
         with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
             f.write("[RGL LOG:] sid {} not in correct gamemode".format(steamid))
-        print("Couldn't find correct gamemode")
-        exit(-1)
+        return "Couldn't find correct gamemode"
 
     if division is None or team_id is None:
         division = ""
         team_id = ""
         with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
             f.write("[RGL LOG:] sid {} not found with valid div/team, but in RGL".format(steamid))
-        print(",".join([division, name, team_id]))
-        exit(-1)
+        return ",".join([division, name, team_id])
     
     with open("plwlog/{}_successlog".format(time.time()), "w+") as f:
-            f.write("[RGL LOG:] sid {} found!".format(steamid))
-    print(",".join([division, name, team_id]))
-    exit(0)
+        f.write("[RGL LOG:] sid {} found!".format(steamid))
+    return ",".join([division, name, team_id])

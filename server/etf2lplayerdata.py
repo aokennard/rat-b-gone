@@ -1,5 +1,3 @@
-import sys
-import os
 import time
 import json
 import requests
@@ -11,10 +9,7 @@ ETF2L_TEAM_MATCHES_API_URL = "https://api.etf2l.org/team/{}/matches.json"
 
 GAMEMODE_MAP = {'1' : 'Highlander', '2' : '6on6'}
 
-if __name__ == "__main__":
-    # we spawned this process - we gave it these arguments guaranteed
-    steamid = sys.argv[1]
-    gamemode = sys.argv[2]
+def get_etf2l_data(steamid, gamemode):
 
     resp = requests.get(ETF2L_PLAYER_API_URL.format(steamid))
 
@@ -23,8 +18,7 @@ if __name__ == "__main__":
     status = resp_json["status"]["code"]
 
     if status == 500:
-        print("Player not found")
-        exit(-1)
+        return "Player not found"
 
     name = resp_json["player"]["name"]
     teams = resp_json["player"]["teams"]
@@ -34,14 +28,12 @@ if __name__ == "__main__":
         current_time = time.time()
         for ban in bans:
             if ban["end"] > current_time:
-                print(",".join(["banned", name, "banned"]))
-                exit(0)
+                return ",".join(["banned", name, "banned"])
 
     comp_team = None
 
     if teams is None:
-        print("No teams")
-        exit(-1)
+        return "No teams"
 
     for team in teams:
         if team["type"] == GAMEMODE_MAP[gamemode]:
@@ -49,8 +41,7 @@ if __name__ == "__main__":
             break
 
     if comp_team is None:
-        print("No team of gamemode type")
-        exit(-1)
+        return "No team of gamemode type"
 
     # This is if we want to only check active ones
     #matches_json = json.loads(requests.get(ETF2L_TEAM_MATCHES_API_URL.format(comp_team["id"])).text)
@@ -70,6 +61,4 @@ if __name__ == "__main__":
                 recent_competition = int(competition)
                 division = comp_team["competitions"][competition]["division"]["tier"]
 
-    print(",".join([str(division), name, str(teamid)]))
-    exit(0)
-        
+    return ",".join([str(division), name, str(teamid)])

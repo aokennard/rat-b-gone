@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #include <sourcemod>
-#include <system2>
+#include <curl>
 #define AUTOLOAD_EXTENSIONS
 #define REQUIRE_EXTENSIONS
 
@@ -15,6 +15,8 @@
 #define FAKE_PASSWORD_VAR "cl_team"
 #define DEFAULT_FAKE_PW "ringer"
 #define DEFAULT_PASSWORD "pugmodepw"
+
+#define DEFAULT_CHECKER_URL "pootis.org/leagueresolver"
 
 #define STEAMID_LENGTH 32
 #define MAX_PASSWORD_LENGTH 255
@@ -65,7 +67,10 @@ ConVar g_allowBannedPlayers;
 ConVar g_allowChatMessages;
 ConVar g_allowKickedOutput;
 ConVar g_pugMode;
+ConVar g_leagueResolverURL;
 
+char g_cURLResponseBuffer[1024];
+char g_sourcemodPath[400];
 char IntToETF2LDivision[5][] = {"Prem", "Division 1", "Division 2", "Division 3", "Division 4"};
 char IntToRGLDivision[7][] = {"Invite", "Division 1", "Division 2", "Main", "Intermediate", "Amateur", "Newcomer"};
 char KickMessages[7][] = {"You are not an RGL player in the currently whitelisted divisions",
@@ -123,6 +128,9 @@ public OnPluginStart()
 
 	g_ringerPassword = CreateConVar("plw_fakepw", DEFAULT_FAKE_PW, "The password that ringers / specs can use to join - max length of 255");
 
+	g_leagueResolverURL = CreateConVar("plw_leaguechecker_url", DEFAULT_CHECKER_URL, "The URL of a server which can resolve requests of 'steamid' to whether the player is valid");
+
+	HookEvent("server_spawn", GetGameDirHook);
 	HookEvent("player_connect", ConnectSilencer, EventHookMode_Pre);
 	HookEvent("player_disconnect", KickSilencer, EventHookMode_Pre);
 	HookConVarChange(g_useWhitelist, ConVarChangeEnabled);
@@ -163,6 +171,18 @@ public Action KickSilencer(Event event, const char[] name, bool dontBroadcast) {
 		}
 	}
 	return Plugin_Continue;
+}
+
+public Action GetGameDirHook(Event event, const char[] name, bool dontBroadcast) {
+	char game[256];
+	event.GetString("game", game, sizeof(game));
+
+	char sm_path[128];
+	BuildPath(Path_SM, sm_path, sizeof(sm_path), "");
+
+	Format(g_sourcemodPath, sizeof(g_sourcemodPath), "%s\\%s", game, sm_path);
+
+	UnhookEvent("server_spawn", GetGameDirHook);
 }
 
 public void ConVarChangeKick(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
@@ -410,11 +430,9 @@ public int RGLDivisionToInt(char div[64]) {
 	return -1;
 }
 
-public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int league) {
-	char pyOutData[DEFAULT_BUFFER_SIZE];
+public void LeagueSuccessHelper(int client, int league) {
 	char divisionNameTeamID[3][64]; // (div, rgl_name, team id)
-	output.GetOutput(pyOutData, sizeof(pyOutData));
-	ExplodeString(pyOutData, ",", divisionNameTeamID, 3, 64);
+	ExplodeString(g_cURLResponseBuffer, ",", divisionNameTeamID, 3, 64);
 
 	PrintToServer("div: %s name: %s teamid: %s", divisionNameTeamID[0], divisionNameTeamID[1], divisionNameTeamID[2]);
 	int div = (league == LEAGUE_RGL ? RGLDivisionToInt(divisionNameTeamID[0]) : ETF2LDivisionToInt(divisionNameTeamID[0]));
@@ -466,63 +484,91 @@ public void LeagueSuccessHelper(System2ExecuteOutput output, int client, int lea
 	}
 }
 
-public void ETF2LGetPlayerDataCallback(bool success, const char[] command, System2ExecuteOutput output, any data) {
-	int client = data;
-	if (!success || output.ExitStatus != 0) {
-		/*char pyOutData[DEFAULT_BUFFER_SIZE];
-		output.GetOutput(pyOutData, sizeof(pyOutData));
-		PrintToServer("output: %s", pyOutData);*/
-		if (GetConVarInt(g_leaguesAllowed) & LEAGUE_RGL) {
-			KickClient(client, "You are not an RGL or ETF2L player");
-		} else {
-			KickClient(client, "You are not an ETF2L player");
-		}
-	} else {
-		LeagueSuccessHelper(output, client, LEAGUE_ETF2L);
+public bool get_response_success() {
+	int comma_index = FindCharInString(g_cURLResponseBuffer, ',', false);
+	if (comma_index == -1) {
+		return false;
 	}
+	comma_index = FindCharInString(g_cURLResponseBuffer + comma_index)
+	return comma_index != -1;
 }
 
-public void GetSMPath(char[] path, int maxLength) {
-	char smdir[4096]; // max ext4 path len
-	System2_GetGameDir(smdir, sizeof(smdir));
-	StrCat(smdir, 4096, "/addons/sourcemod/");
-	strcopy(path, maxLength, smdir);
+public void ETF2LGetPlayerDataCallback(Handle hCurl, CURLcode code, any data) {
+	int client = data;
+	if (code != CURLE_OK) {
+		char curlError[256];
+		curl_easy_strerror(code, curlError, sizeof(curlError));
+	} else {
+		bool success = get_response_success();
+		if (success) {
+			LeagueSuccessHelper(client, LEAGUE_ETF2L);
+		} else {
+			if (GetConVarInt(g_leaguesAllowed) & LEAGUE_RGL) {
+				KickClient(client, "You are not an RGL or ETF2L player");
+			} else {
+				KickClient(client, "You are not an ETF2L player");
+			}
+		}
+	}
+	CloseHandle(hCurl);
+}
+
+public void setup_curl_request(const String:steamID[], int client, int league) {
+	Handle hCurl = curl_easy_init();
+	if (hCurl == INVALID_HANDLE) {
+		PrintToServer("Invalid CURL handle on setup");
+		return;
+	}
+
+	curl_easy_setopt_function(hCurl, CURLOPT_WRITEFUNCTION, ReceiveData);
+
+	char local_leagueResolverURL[1024];
+	GetConVarString(g_leagueResolverURL, local_leagueResolverURL, sizeof(local_leagueResolverURL));
+
+	char temp_buffer[512];
+	Format(temp_buffer, sizeof(temp_buffer), "?steamid=%s&gamemode=%d&league=%s", steamID, GetConVarInt(g_gamemode), league == LEAGUE_RGL ? "RGL" : "ETF2L");
+	StrCat(local_leagueResolverURL, temp_buffer, sizeof(temp_buffer));
+
+	curl_easy_setopt_string(hCurl, CURLOPT_URL, local_leagueResolverURL);
+
+	strcopy(g_cURLResponseBuffer, sizeof(g_cURLResponseBuffer), "");
+
+	curl_easy_perform_thread(hCurl, league == LEAGUE_RGL ? RGLGetPlayerDataCallback : ETF2LGetPlayerDataCallback, client);
+}
+
+public ReceiveData(Handle handle, const String:buffer[], const bytes, const nmemb) {
+	StrCat(g_cURLResponseBuffer, sizeof(g_cURLResponseBuffer), buffer);
+	return bytes * nmemb;
 }
 
 public void GetETF2LUserByID(const String:steamID[], int client) {
-	char smPath[4096];
-	GetSMPath(smPath, sizeof(smPath));
-	System2_ExecuteFormattedThreaded(ETF2LGetPlayerDataCallback, client, 
-									"python3 %s/scripting/etf2lplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
+	setup_curl_request(steamID, client, LEAGUE_ETF2L);
 }
 
-public void RGLGetPlayerDataCallback(bool success, const char[] command, System2ExecuteOutput output, any data) {
+public void RGLGetPlayerDataCallback(Handle hCurl, CURLcode code, any data) {
 	int client = data;
-	
-	if (!success || output.ExitStatus != 0) {
-		// failed to get, they aren't in RGL
-		// Causes exception I guess? TODO
-		/* char pyOutData[DEFAULT_BUFFER_SIZE];
-		output.GetOutput(pyOutData, sizeof(pyOutData));
-		PrintToServer("output: %s", pyOutData); */
-		// etf2l is always checked last unless it's only one
-		if (GetConVarInt(g_leaguesAllowed) & LEAGUE_ETF2L) {
-			char steamID[STEAMID_LENGTH];
-			GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
-			GetETF2LUserByID(steamID, client);
-		} else {
-			KickClient(client, "You are not an RGL player");
-		}
+	if (code != CURLE_OK) {
+		char curlError[256];
+		curl_easy_strerror(code, curlError, sizeof(curlError));
 	} else {
-		LeagueSuccessHelper(output, client, LEAGUE_RGL);
+		bool success = get_response_success();
+		if (success) {
+			LeagueSuccessHelper(client, LEAGUE_RGL);
+		} else {
+			if (GetConVarInt(g_leaguesAllowed) & LEAGUE_ETF2L) {
+				char steamID[STEAMID_LENGTH];
+				GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
+				GetETF2LUserByID(steamID, client);
+			} else {
+				KickClient(client, "You are not an RGL player");
+			}
+		}
 	}
+	CloseHandle(hCurl);
 }
 
 public void GetRGLUserByID(const String:steamID[], int client) {
-	char smPath[4096];
-	GetSMPath(smPath, sizeof(smPath));
-	System2_ExecuteFormattedThreaded(RGLGetPlayerDataCallback, client, 
-									"python3 %s/scripting/rglplayerdata.py %s %d", smPath, steamID, GetConVarInt(g_gamemode));
+	setup_curl_request(steamID, client, LEAGUE_RGL);
 }
 
 public void OnClientAuthorized(int client, const char[] auth)
