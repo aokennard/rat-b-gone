@@ -5,6 +5,11 @@ import rglplayerdata
 
 app = Flask(__name__)
 
+@app.route('/')
+def helloindex():
+    print("wuh")
+    return "Yee"
+
 @app.route('/leagueresolver')
 def resolve_steamid():
     steamid = request.args.get('steamid')
@@ -22,4 +27,4 @@ def resolve_steamid():
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True, host="0.0.0.0")

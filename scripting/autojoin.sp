@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #include <sourcemod>
-#include <curl>
+#include <cURL>
 #define AUTOLOAD_EXTENSIONS
 #define REQUIRE_EXTENSIONS
 
@@ -16,7 +16,7 @@
 #define DEFAULT_FAKE_PW "ringer"
 #define DEFAULT_PASSWORD "pugmodepw"
 
-#define DEFAULT_CHECKER_URL "pootis.org/leagueresolver"
+#define DEFAULT_CHECKER_URL "pootis.org:5000/leagueresolver"
 
 #define STEAMID_LENGTH 32
 #define MAX_PASSWORD_LENGTH 255
@@ -486,10 +486,6 @@ public void LeagueSuccessHelper(int client, int league) {
 
 public bool get_response_success() {
 	int comma_index = FindCharInString(g_cURLResponseBuffer, ',', false);
-	if (comma_index == -1) {
-		return false;
-	}
-	comma_index = FindCharInString(g_cURLResponseBuffer + comma_index)
 	return comma_index != -1;
 }
 
@@ -524,10 +520,9 @@ public void setup_curl_request(const String:steamID[], int client, int league) {
 
 	char local_leagueResolverURL[1024];
 	GetConVarString(g_leagueResolverURL, local_leagueResolverURL, sizeof(local_leagueResolverURL));
-
 	char temp_buffer[512];
 	Format(temp_buffer, sizeof(temp_buffer), "?steamid=%s&gamemode=%d&league=%s", steamID, GetConVarInt(g_gamemode), league == LEAGUE_RGL ? "RGL" : "ETF2L");
-	StrCat(local_leagueResolverURL, temp_buffer, sizeof(temp_buffer));
+	StrCat(local_leagueResolverURL, sizeof(local_leagueResolverURL), temp_buffer);
 
 	curl_easy_setopt_string(hCurl, CURLOPT_URL, local_leagueResolverURL);
 
