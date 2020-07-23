@@ -71,7 +71,7 @@ ConVar g_pugMode;
 ConVar g_leagueResolverURL;
 ConVar g_teamExecCommands;
 
-int g_clientTeams[MAXCLIENTS];
+int g_clientTeams[64];
 char g_cURLResponseBuffer[1024];
 char g_sourcemodPath[400];
 
@@ -154,7 +154,7 @@ public OnPluginStart()
 	HookConVarChange(g_ringerPassword, ConVarChangeFakePW);
 	HookConVarChange(g_pugMode, ConVarChangePug);
 	HookConVarChange(g_allowKickedOutput, ConVarChangeKick);	
-	HookConVarChange(g_teamExecCommands, ConVarChangeExec)
+	HookConVarChange(g_teamExecCommands, ConVarChangeExec);
 	PrintToServer("Competitive Player Whitelist loaded");
 }
 
@@ -183,7 +183,7 @@ public Action KickSilencer(Event event, const char[] name, bool dontBroadcast) {
 			PrintToServer("reason: %s", disconnectReason);
 		}
 	}
-	int client = GetClientOfUserId(GetEventInt(event, "userid"))
+	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	g_clientTeams[client] = -1;
 	return Plugin_Continue;
 }
@@ -192,8 +192,8 @@ public Action TeamSayHook(int client, int args) {
 	if (GetConVarBool(g_teamExecCommands) && g_clientTeams[client] == GetConVarInt(g_teamID)) {
 		char command_buffer[128];
 		GetCmdArgString(command_buffer, sizeof(command_buffer));
-		if (command_buffer[0] == '!') {
-			PrintToChatAll("%s", command_buffer[1]);
+		StripQuotes(command_buffer);
+		if (command_buffer[0] == '!' && strcmp(command_buffer, "!add", true) && strcmp(command_buffer, "!remove", true)) {
 			ServerCommand("%s", command_buffer[1]);
 			return Plugin_Handled;
 		} 
