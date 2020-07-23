@@ -70,6 +70,7 @@ ConVar g_allowJoinOutput;
 ConVar g_pugMode;
 ConVar g_leagueResolverURL;
 ConVar g_teamExecCommands;
+ConVar g_useLeagueName;
 
 int g_clientTeams[64];
 char g_cURLResponseBuffer[1024];
@@ -105,6 +106,7 @@ public OnPluginStart()
 
 	g_allowChatMessages = CreateConVar("plw_chat_output", "1", "Toggles the plugin printing to chat on join/kick");
 
+	g_useLeagueName = CreateConVar("plw_use_league_alias", "0", "Uses official league alias for joining players");
 	g_allowJoinOutput = CreateConVar("plw_join_output", "1", "Toggles in-chat join messages (spam prevention)");
 	g_allowKickedOutput = CreateConVar("plw_kick_output", "0", "Toggles in-chat kick messages (prevents spamming, usually)");
 
@@ -528,6 +530,8 @@ public void LeagueSuccessHelper(int client, int league) {
 		KickClient(client, "You don't fit the current server's whitelist rules");
 	}
 	g_clientTeams[client] = StringToInt(divisionNameTeamID[2]);
+	if (GetConVarBool(g_useLeagueName))
+		SetClientName(client, divisionNameTeamID[1]);
 }
 
 public bool get_response_success() {

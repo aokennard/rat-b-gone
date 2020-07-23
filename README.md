@@ -14,7 +14,7 @@ The plugin expects `python3` in your PATH.
 ### SourcePawn
 
 You need [Metamod](http://wiki.alliedmods.net/Installing_Metamod:Source) and [SourceMod](http://wiki.alliedmods.net/Installing_SourceMod) installed first for this plugin to work.  
-Additionally, this uses [System2](https://github.com/dordnung/System2) as a dependency, so you also need that.
+Additionally, this uses [cURL](https://forums.alliedmods.net/showthread.php?t=152216) as a dependency, so you also need that.
 
 Download this repo and extract to your addons/sourcemod folder. I assume you have the SourcePawn compiler (`./spcomp`) in sourcemod/scripting.
 `make` in order to build the plugin.
@@ -34,6 +34,8 @@ This plugin restricts who can join a server based on a few variables.
 - `plw_(scrim/team/match)id`: The ID of an RGL team, to be used for `plw_mode`'s, allowing only certain teams of players into the server.  
 - `plw_fakepw`: In order to allow ringers to join (in case of scrim/team/match restrictions), they need to use a 'password' - due to protected variables not being exposed (client's `password`), we use another variable: `cl_team`.
 - `plw_pugmode`: Disables whitelist (assumes not everyone in RGL), sets a default `sv_password`  
+- `plw_teamexec`: Allows members of g_teamID to execute RCON commands from chat  
+- `plw_leaguechecker_url`: (Testing) the URL to point to a server which resolves a steamid for RGL/ETF2L via cURl
 
 ## WIP
 
