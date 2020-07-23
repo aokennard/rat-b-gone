@@ -66,6 +66,7 @@ ConVar g_gamemode;
 ConVar g_allowBannedPlayers;
 ConVar g_allowChatMessages;
 ConVar g_allowKickedOutput;
+ConVar g_allowJoinOutput;
 ConVar g_pugMode;
 ConVar g_leagueResolverURL;
 ConVar g_teamExecCommands;
@@ -104,6 +105,7 @@ public OnPluginStart()
 
 	g_allowChatMessages = CreateConVar("plw_chat_output", "1", "Toggles the plugin printing to chat on join/kick");
 
+	g_allowJoinOutput = CreateConVar("plw_join_output", "1", "Toggles in-chat join messages (spam prevention)");
 	g_allowKickedOutput = CreateConVar("plw_kick_output", "0", "Toggles in-chat kick messages (prevents spamming, usually)");
 
 	// pug mode requires a password, because people might not play in RGL. 
@@ -157,7 +159,11 @@ public OnPluginStart()
 }
 
 public Action ConnectSilencer(Event event, const char[] name, bool dontBroadcast) {
-	SetEventBroadcast(event, true);
+	if (GetConVarBool(g_allowJoinOutput)) {
+		if (!dontBroadcast)
+			SetEventBroadcast(event, true);
+	}
+	
 	return Plugin_Continue;
 }
 
