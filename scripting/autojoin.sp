@@ -1,6 +1,7 @@
 #pragma semicolon 1
 
 #include <sourcemod>
+#include <sdktools>
 #include <cURL>
 #define AUTOLOAD_EXTENSIONS
 #define REQUIRE_EXTENSIONS
