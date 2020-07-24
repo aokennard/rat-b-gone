@@ -53,6 +53,7 @@
 
 #define GAMEMODE_HL 0x1
 #define GAMEMODE_6S 0x2
+#define GAMEMODE_YMPS 0x4
 
 ConVar g_useWhitelist;
 ConVar g_rglDivsAllowed;

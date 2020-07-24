@@ -8,8 +8,8 @@ except ImportError:
     print("Exiting with status 0 so all people are allowed instead of none")
     exit(0)
 
-# 1 = hl, 2 = 6v
-RGL_SEARCH_LEAGUE_TABLE = {"2" : "40", "7v7" : "1", "6v6NR" : "37", "1" : "24"}
+# 1 = hl, 2 = 6v, 4 = yomps tourney
+RGL_SEARCH_LEAGUE_TABLE = {"2" : "40", "7v7" : "1", "6v6NR" : "37", "1" : "24", "4" : "54"}
 RGL_LEAGUE_STRING_ID_MAP = {"Prolander" : "7v7", "NR Sixes" : "6v6NR", "Highlander" : "1", "Trad. Sixes" : "2"}
 RGL_SEARCH_URL = "https://rgl.gg/Public/PlayerProfile.aspx?p={}&r={}"
 
