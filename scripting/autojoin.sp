@@ -214,26 +214,33 @@ public Action TeamSayHook(int client, int args) {
 
 // taken from https://github.com/erynnb/pugchamp
 public void Event_NameChange(Event event, const char[] name, bool dontBroadcast) {
-    int client = GetClientOfUserId(event.GetInt("userid"));
+	if (!GetConVarBool(g_useLeagueName)) {
+		return;
+	}
+	int client = GetClientOfUserId(event.GetInt("userid"));
 
-    if (!IsClientReplay(client) && !IsClientSourceTV(client)) {
-        char newName[32];
-        event.GetString("newname", newName, sizeof(newName));
+	if (!IsClientReplay(client) && !IsClientSourceTV(client)) {
+		char newName[32];
+		event.GetString("newname", newName, sizeof(newName));
 
-        char steamID[32];
-        GetClientAuthId(client, AuthId_SteamID64, steamID, sizeof(steamID));
+		char steamID[32];
+		GetClientAuthId(client, AuthId_SteamID64, steamID, sizeof(steamID));
 
-        char playerName[32];
-        if (playerNames.GetString(steamID, playerName, sizeof(playerName))) {
-            if (!StrEqual(newName, playerName)) {
-                SetClientName(client, playerName);
-            }
-        }
-    }
+		char playerName[32];
+		if (playerNames.GetString(steamID, playerName, sizeof(playerName))) {
+			if (!StrEqual(newName, playerName)) {
+				SetClientName(client, playerName);
+			}
+		}
+	}
 }
  
 // taken from https://github.com/erynnb/pugchamp
 public Action UserMessage_SayText2(UserMsg msg_id, BfRead msg, const int[] players, int playersNum, bool reliable, bool init) {
+	if (!GetConVarBool(g_useLeagueName)) {
+		return Plugin_Continue;
+	}
+
     char buffer[512];
 
     if (!reliable) {
