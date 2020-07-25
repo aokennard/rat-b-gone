@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pip3
+pip3 1>/dev/null
 if [[ $? -ne 0 ]]; then
     if [ -f yum ]; then yum install epel-release; yum install python-pip;
     elif [ -f pacman ]; then pacman -S python-pip;
@@ -31,6 +31,6 @@ fi
 cp scripting/* $SM_DIR/scripting/
 
 cd $SM_DIR
-./scripting/spcomp autojoin.sp
+./scripting/spcomp scripting/autojoin.sp
 mkdir -p plugins/
 mv autojoin.smx plugins/
