@@ -74,9 +74,11 @@ ConVar g_leagueResolverURL;
 ConVar g_teamExecCommands;
 ConVar g_useLeagueName;
 
-int g_clientTeams[64];
 char g_cURLResponseBuffer[1024];
 char g_sourcemodPath[400];
+
+StringMap playerNames;
+StringMap playerTeams;
 
 char IntToETF2LDivision[5][] = {"Prem", "Division 1", "Division 2", "Division 3", "Division 4"};
 char IntToRGLDivision[7][] = {"Invite", "Division 1", "Division 2", "Main", "Intermediate", "Amateur", "Newcomer"};
@@ -141,12 +143,16 @@ public OnPluginStart()
 
 	g_leagueResolverURL = CreateConVar("plw_leaguechecker_url", DEFAULT_CHECKER_URL, "The URL of a server which can resolve requests of 'steamid' to whether the player is valid");
 
+	playerNames = new StringMap();
+	playerTeams = new StringMap();
+
 	HookEvent("server_spawn", GetGameDirHook);
 	HookEvent("player_connect", ConnectSilencer, EventHookMode_Pre);
 	HookEvent("player_disconnect", KickSilencer, EventHookMode_Pre);
 	HookEvent("player_changename", Event_NameChange, EventHookMode_Post);
 	HookUserMessage(GetUserMessageId("SayText2"), UserMessage_SayText2, true);
 	RegConsoleCmd("say", TeamSayHook);
+	RegServerCmd("plw_forceupdate_alias", Command_AliasUpdate);
 	// just server output, possibly correction of invalid commands
 	HookConVarChange(g_useWhitelist, ConVarChangeEnabled);
 	HookConVarChange(g_allowBannedPlayers, ConVarChangeBanCheck);
@@ -166,6 +172,11 @@ public OnPluginStart()
 	HookConVarChange(g_allowJoinOutput, ConVarChangeJoin);
 	PrintToServer("Competitive Player Whitelist loaded");
 }
+
+public void OnMapStart() {
+	//playerNames.Clear();
+	//playerTeams.Clear();
+} 
 
 public Action ConnectSilencer(Event event, const char[] name, bool dontBroadcast) {
 	if (GetConVarBool(g_allowJoinOutput)) {
@@ -193,12 +204,18 @@ public Action KickSilencer(Event event, const char[] name, bool dontBroadcast) {
 		}
 	}
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
-	g_clientTeams[client] = -1;
+	char client_string[64];
+	IntToString(client, client_string, sizeof(client_string));
+	playerTeams.Remove(client_string);
+	playerNames.Remove(client_string);
 	return Plugin_Continue;
 }
 
 public Action TeamSayHook(int client, int args) {
-	if (GetConVarBool(g_teamExecCommands) && g_clientTeams[client] == GetConVarInt(g_teamID)) {
+	char client_string[64];
+	char teamID[64];
+	IntToString(client, client_string, sizeof(client_string));
+	if (GetConVarBool(g_teamExecCommands) && playerTeams.GetString(client_string, teamID, sizeof(teamID)) && StringToInt(teamID) == GetConVarInt(g_teamID)) {
 		char command_buffer[128];
 		GetCmdArgString(command_buffer, sizeof(command_buffer));
 		StripQuotes(command_buffer);
@@ -212,22 +229,32 @@ public Action TeamSayHook(int client, int args) {
 	return Plugin_Continue;
 }
 
+public Action Command_AliasUpdate(int args) {
+	for (int i = 1; i < MaxClients; i++) {
+		if (IsClientConnected(i)) {
+			char playerName[32];
+			char client_string[64];
+			IntToString(i, client_string, sizeof(client_string));
+			playerNames.GetString(client_string, playerName, sizeof(playerName));
+			SetClientName(i, playerName);
+		}
+	}
+} 
+
 // taken from https://github.com/erynnb/pugchamp
 public void Event_NameChange(Event event, const char[] name, bool dontBroadcast) {
 	if (!GetConVarBool(g_useLeagueName)) {
 		return;
 	}
 	int client = GetClientOfUserId(event.GetInt("userid"));
-
+	char client_string[32];
+	IntToString(client, client_string, sizeof(client_string));
 	if (!IsClientReplay(client) && !IsClientSourceTV(client)) {
 		char newName[32];
 		event.GetString("newname", newName, sizeof(newName));
 
-		char steamID[32];
-		GetClientAuthId(client, AuthId_SteamID64, steamID, sizeof(steamID));
-
 		char playerName[32];
-		if (playerNames.GetString(steamID, playerName, sizeof(playerName))) {
+		if (playerNames.GetString(client_string, playerName, sizeof(playerName))) {
 			if (!StrEqual(newName, playerName)) {
 				SetClientName(client, playerName);
 			}
@@ -237,9 +264,9 @@ public void Event_NameChange(Event event, const char[] name, bool dontBroadcast)
  
 // taken from https://github.com/erynnb/pugchamp
 public Action UserMessage_SayText2(UserMsg msg_id, BfRead msg, const int[] players, int playersNum, bool reliable, bool init) {
-	if (!GetConVarBool(g_useLeagueName)) {
-		return Plugin_Continue;
-	}
+    if (!GetConVarBool(g_useLeagueName)) {
+        return Plugin_Continue;
+    }
 
     char buffer[512];
 
@@ -270,7 +297,7 @@ public Action GetGameDirHook(Event event, const char[] name, bool dontBroadcast)
 	UnhookEvent("server_spawn", GetGameDirHook);
 }
 
-public bool ValidBoolConVarUpdate(const char[] oldvalue, const char[] newvalue, const char[] defaultvalue) {
+public bool ValidBoolConVarUpdate(ConVar cvar, const char[] oldvalue, const char[] newvalue, const char[] defaultvalue) {
 	if (strlen(newvalue) != 1 || (newvalue[0] != '0' && newvalue[0] != '1')) {
 		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (off)");
 		SetConVarString(cvar, "0");
@@ -282,38 +309,38 @@ public bool ValidBoolConVarUpdate(const char[] oldvalue, const char[] newvalue, 
 }
 
 public void ConVarChangeLeagueAlias(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
-	if (ValidBoolConVarUpdate(oldvalue, newvalue, "0") && GetConVarBool(g_allowChatMessages)) {
+	if (ValidBoolConVarUpdate(cvar, oldvalue, newvalue, "0") && GetConVarBool(g_allowChatMessages)) {
 		PrintToChatAll("[SM]: Use league names mode %s", StringToInt(newvalue) == 1 ? "enabled" : "disabled");
 	}
 }				
 
 public void ConVarChangeJoin(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
-	if (ValidBoolConVarUpdate(oldvalue, newvalue, "1") && GetConVarBool(g_allowChatMessages)) {
+	if (ValidBoolConVarUpdate(cvar, oldvalue, newvalue, "1") && GetConVarBool(g_allowChatMessages)) {
 		PrintToChatAll("[SM]: Join output mode %s", StringToInt(newvalue) == 1 ? "enabled" : "disabled");
 	}
 }
 
 public void ConVarChangeExec(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
-	if (ValidBoolConVarUpdate(oldvalue, newvalue, "0") && GetConVarBool(g_allowChatMessages)) {
+	if (ValidBoolConVarUpdate(cvar, oldvalue, newvalue, "0") && GetConVarBool(g_allowChatMessages)) {
 		PrintToChatAll("[SM]: Team Exec mode %s (WARNING: possibly unsafe)", StringToInt(newvalue) == 1 ? "enabled" : "disabled");
 	}
 }
 
 public void ConVarChangeKick(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
-	if (ValidBoolConVarUpdate(oldvalue, newvalue, "0") && GetConVarBool(g_allowChatMessages)) {
+	if (ValidBoolConVarUpdate(cvar, oldvalue, newvalue, "0") && GetConVarBool(g_allowChatMessages)) {
 		PrintToChatAll("[SM]: Kick output mode %s", StringToInt(newvalue) == 1 ? "enabled" : "disabled");
 	}
 }
 
 public void ConVarChangePug(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
-	if (ValidBoolConVarUpdate(oldvalue, newvalue, "0")) {
-		if (int_newvalue == 1) {
+	if (ValidBoolConVarUpdate(cvar, oldvalue, newvalue, "0")) {
+		if (StringToInt(newvalue) == 1) {
 			SetConVarString(g_useWhitelist, "0");
 			// set to whatever you want server pw to be, this is just a placeholder
 			SetConVarString(FindConVar("sv_password"), DEFAULT_PASSWORD);
 		}
 
-		if (int_newvalue == 0) {
+		if (StringToInt(newvalue) == 0) {
 			SetConVarString(g_useWhitelist, "1");
 			SetConVarString(FindConVar("sv_password"), "");
 		}
@@ -324,13 +351,13 @@ public void ConVarChangePug(ConVar cvar, const char[] oldvalue, const char[] new
 }
 
 public void ConVarChangeEnabled(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
-	if (ValidBoolConVarUpdate(oldvalue, newvalue, "1") && GetConVarBool(g_allowChatMessages)) {
+	if (ValidBoolConVarUpdate(cvar, oldvalue, newvalue, "1") && GetConVarBool(g_allowChatMessages)) {
 		PrintToChatAll("[SM]: Player whitelist %s", StringToInt(newvalue) == 1 ? "enabled" : "disabled");
 	}
 }
 
 public void ConVarChangeBanCheck(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
-	if (ValidBoolConVarUpdate(oldvalue, newvalue, "0") && GetConVarBool(g_allowChatMessages)) {
+	if (ValidBoolConVarUpdate(cvar, oldvalue, newvalue, "0") && GetConVarBool(g_allowChatMessages)) {
 		PrintToChatAll("[SM]: Banned players%sallowed in server", StringToInt(newvalue) == 1 ? " " : " not ");
 	}
 }
@@ -561,7 +588,11 @@ public void LeagueSuccessHelper(int client, int league) {
 		KickClient(client, "You don't fit the current server's whitelist rules");
 	}
 	// May not stay over changelevel?
-	g_clientTeams[client] = StringToInt(divisionNameTeamID[2]);
+	char client_string[64];
+	IntToString(client, client_string, sizeof(client_string));
+	playerTeams.SetString(client_string, divisionNameTeamID[2], true);
+	playerNames.SetString(client_string, divisionNameTeamID[1], true);
+	PrintToServer("New name entry: (%s, %s)", client_string, divisionNameTeamID[1]);
 	if (GetConVarBool(g_useLeagueName))
 		SetClientName(client, divisionNameTeamID[1]);
 }
@@ -656,9 +687,9 @@ public void OnClientAuthorized(int client, const char[] auth)
 	}
 
 	char steamID[STEAMID_LENGTH];
-	if (!GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH)_ {
+	if (!GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH)) {
 		KickClient(client, "Invalid steamID authorization, possibly retry");
-	};
+	}
 	PrintToServer("------steamid %s connected", steamID);
 
 	// Client's password
