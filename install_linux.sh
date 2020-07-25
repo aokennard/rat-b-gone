@@ -20,7 +20,7 @@ fi
 
 if [ -z "$SM_DIR" ]; then
     echo "SM_DIR not found! searching..."
-    SM_DIR = $(find / -type d -path '*/tf/addons/sourcemod' 2>/dev/null)
+    SM_DIR=$(find / -type d -path '*/tf/addons/sourcemod' 2>/dev/null)
     if [ -z "$SM_DIR" ]; then
         echo "SM_DIR is invalid! Please set SM_DIR to your sourcemod/ path (export SM_DIR=../tf/addons/sourcemod)"
         exit 1
