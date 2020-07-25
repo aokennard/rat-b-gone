@@ -159,6 +159,8 @@ public OnPluginStart()
 	HookConVarChange(g_pugMode, ConVarChangePug);
 	HookConVarChange(g_allowKickedOutput, ConVarChangeKick);	
 	HookConVarChange(g_teamExecCommands, ConVarChangeExec);
+	HookConVarChange(g_useLeagueName, ConVarChangeLeagueAlias);
+	HookConVarChange(g_allowJoinOutput, ConVarChangeJoin);
 	PrintToServer("Competitive Player Whitelist loaded");
 }
 
@@ -219,91 +221,69 @@ public Action GetGameDirHook(Event event, const char[] name, bool dontBroadcast)
 	UnhookEvent("server_spawn", GetGameDirHook);
 }
 
-public void ConVarChangeExec(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+public bool ValidBoolConVarUpdate(const char[] oldvalue, const char[] newvalue, const char[] defaultvalue) {
 	if (strlen(newvalue) != 1 || (newvalue[0] != '0' && newvalue[0] != '1')) {
 		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (off)");
 		SetConVarString(cvar, "0");
-		return;
+		return false;
 	}
 	int int_newvalue = StringToInt(newvalue);
 	int int_oldvalue = StringToInt(oldvalue);
-	if (int_newvalue == int_oldvalue) {
-		return;
+	return int_newvalue != int_oldvalue;
+}
+
+public void ConVarChangeLeagueAlias(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	if (ValidBoolConVarUpdate(oldvalue, newvalue, "0") && GetConVarBool(g_allowChatMessages)) {
+		PrintToChatAll("[SM]: Use league names mode %s", StringToInt(newvalue) == 1 ? "enabled" : "disabled");
 	}
-	if (GetConVarBool(g_allowChatMessages))
-		PrintToChatAll("[SM]: Team Exec mode %s (WARNING: possibly unsafe)", int_newvalue == 1 ? "enabled" : "disabled");
+}				
+
+public void ConVarChangeJoin(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	if (ValidBoolConVarUpdate(oldvalue, newvalue, "1") && GetConVarBool(g_allowChatMessages)) {
+		PrintToChatAll("[SM]: Join output mode %s", StringToInt(newvalue) == 1 ? "enabled" : "disabled");
+	}
+}
+
+public void ConVarChangeExec(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	if (ValidBoolConVarUpdate(oldvalue, newvalue, "0") && GetConVarBool(g_allowChatMessages)) {
+		PrintToChatAll("[SM]: Team Exec mode %s (WARNING: possibly unsafe)", StringToInt(newvalue) == 1 ? "enabled" : "disabled");
+	}
 }
 
 public void ConVarChangeKick(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
-	if (strlen(newvalue) != 1 || (newvalue[0] != '0' && newvalue[0] != '1')) {
-		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (off)");
-		SetConVarString(cvar, "0");
-		return;
+	if (ValidBoolConVarUpdate(oldvalue, newvalue, "0") && GetConVarBool(g_allowChatMessages)) {
+		PrintToChatAll("[SM]: Kick output mode %s", StringToInt(newvalue) == 1 ? "enabled" : "disabled");
 	}
-	int int_newvalue = StringToInt(newvalue);
-	int int_oldvalue = StringToInt(oldvalue);
-	if (int_newvalue == int_oldvalue) {
-		return;
-	}
-	if (GetConVarBool(g_allowChatMessages))
-		PrintToChatAll("[SM]: Kick output mode %s", int_newvalue == 1 ? "enabled" : "disabled");
-
 }
 
 public void ConVarChangePug(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
-	if (strlen(newvalue) != 1 || (newvalue[0] != '0' && newvalue[0] != '1')) {
-		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (off)");
-		SetConVarString(cvar, "0");
-		return;
-	}
-	int int_newvalue = StringToInt(newvalue);
-	int int_oldvalue = StringToInt(oldvalue);
-	if (int_newvalue == int_oldvalue) {
-		return;
-	}
-	if (int_newvalue == 1) {
-		SetConVarString(g_useWhitelist, "0");
-		// set to whatever you want server pw to be, this is just a placeholder
-		SetConVarString(FindConVar("sv_password"), DEFAULT_PASSWORD);
-	}
-	if (int_newvalue == 0) {
-		SetConVarString(g_useWhitelist, "1");
-		SetConVarString(FindConVar("sv_password"), "");
-	}
-	if (GetConVarBool(g_allowChatMessages))
-		PrintToChatAll("[SM]: Pug mode %s", int_newvalue == 1 ? "enabled" : "disabled");
+	if (ValidBoolConVarUpdate(oldvalue, newvalue, "0")) {
+		if (int_newvalue == 1) {
+			SetConVarString(g_useWhitelist, "0");
+			// set to whatever you want server pw to be, this is just a placeholder
+			SetConVarString(FindConVar("sv_password"), DEFAULT_PASSWORD);
+		}
+
+		if (int_newvalue == 0) {
+			SetConVarString(g_useWhitelist, "1");
+			SetConVarString(FindConVar("sv_password"), "");
+		}
+
+		if (GetConVarBool(g_allowChatMessages))
+			PrintToChatAll("[SM]: Pug mode %s", StringToInt(newvalue) == 1 ? "enabled" : "disabled");
+		}
 }
 
 public void ConVarChangeEnabled(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
-	if (strlen(newvalue) != 1 || (newvalue[0] != '0' && newvalue[0] != '1')) {
-		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (on)");
-		SetConVarString(cvar, "1");
-		return;
+	if (ValidBoolConVarUpdate(oldvalue, newvalue, "1") && GetConVarBool(g_allowChatMessages)) {
+		PrintToChatAll("[SM]: Player whitelist %s", StringToInt(newvalue) == 1 ? "enabled" : "disabled");
 	}
-
-	int int_newvalue = StringToInt(newvalue);
-	int int_oldvalue = StringToInt(oldvalue);
-	if (int_newvalue == int_oldvalue) {
-		return;
-	}
-	if (GetConVarBool(g_allowChatMessages))
-		PrintToChatAll("[SM]: Player whitelist %s", int_newvalue == 1 ? "enabled" : "disabled");
 }
 
 public void ConVarChangeBanCheck(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
-	if (strlen(newvalue) != 1 || (newvalue[0] != '0' && newvalue[0] > '1')) {
-		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (on)");
-		SetConVarString(cvar, "0");
-		return;
+	if (ValidBoolConVarUpdate(oldvalue, newvalue, "0") && GetConVarBool(g_allowChatMessages)) {
+		PrintToChatAll("[SM]: Banned players%sallowed in server", StringToInt(newvalue) == 1 ? " " : " not ");
 	}
-
-	int int_newvalue = StringToInt(newvalue);
-	int int_oldvalue = StringToInt(oldvalue);
-	if (int_newvalue == int_oldvalue) {
-		return;
-	}
-	if (GetConVarBool(g_allowChatMessages))
-		PrintToChatAll("[SM]: Banned players%sallowed in server", int_newvalue == 1 ? " " : " not ");
 }
 
 public void ConVarChangeGamemode(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
