@@ -10,7 +10,7 @@ except ImportError:
 
 # 1 = hl, 2 = 6v, 4 = yomps tourney
 RGL_SEARCH_LEAGUE_TABLE = {"2" : "40", "7v7" : "1", "6v6NR" : "37", "1" : "24", "4" : "54"}
-RGL_LEAGUE_STRING_ID_MAP = {"Prolander" : "7v7", "NR Sixes" : "6v6NR", "Highlander" : "1", "Trad. Sixes" : "2"}
+RGL_LEAGUE_STRING_ID_MAP = {"Prolander" : "7v7", "NR Sixes" : "6v6NR", "Highlander" : "1", "Trad. Sixes" : "2", "Yomps Tourney" : "4"}
 RGL_SEARCH_URL = "https://rgl.gg/Public/PlayerProfile.aspx?p={}&r={}"
 
 '''
@@ -52,12 +52,16 @@ def get_gamemode_from_string(gamemode_str):
             return RGL_LEAGUE_STRING_ID_MAP[gamemode]
         return None
     if gamemode == "Highlander":
-        if region == "HL North America":
+        if region == "NA Highlander":
             return RGL_LEAGUE_STRING_ID_MAP[gamemode]
         return None
+    print(region)
     if gamemode == "Trad. Sixes":
         if region == "NA Traditional Sixes":
             return RGL_LEAGUE_STRING_ID_MAP[gamemode]
+        if region == "yomps' Family Fundraiser":
+            print("aaa")
+            return RGL_LEAGUE_STRING_ID_MAP["Yomps Tourney"]
         return None
     if gamemode == "NR Sixes":
         if region == "No Restriction Sixes":
@@ -148,18 +152,20 @@ def get_rgl_data(steamid, gamemode):
     # h3, hr, table is the format repeated
     league_types = div_head.find_all("h3")
     league_tables = div_head.find_all("table")
+
     division = None
     team_id = None
-
     # at end of league_types / h3's, there is a banhistory
     league_table_index = 0
     for i, league_type_tag in enumerate(league_types):
         league_type_span = league_type_tag.find("span")
-
         if league_type_span['id'] and league_type_span['id'].startswith("ContentPlaceHolder1_Main_rptLeagues_lblLeagueName"):
+            
             league_type_string = league_type_span.text
+            gamemode_str = get_gamemode_from_string(league_type_string)
+            print(gamemode_str)
             # process string to determine if correct gamemode
-            if gamemode == get_gamemode_from_string(league_type_string):
+            if gamemode == gamemode_str:
                 league_table = league_tables[league_table_index]
                 division, team_id = get_div_teamid_from_table(league_table)
                 break
