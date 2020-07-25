@@ -144,7 +144,10 @@ public OnPluginStart()
 	HookEvent("server_spawn", GetGameDirHook);
 	HookEvent("player_connect", ConnectSilencer, EventHookMode_Pre);
 	HookEvent("player_disconnect", KickSilencer, EventHookMode_Pre);
+	HookEvent("player_changename", Event_NameChange, EventHookMode_Post);
+	HookUserMessage(GetUserMessageId("SayText2"), UserMessage_SayText2, true);
 	RegConsoleCmd("say", TeamSayHook);
+	// just server output, possibly correction of invalid commands
 	HookConVarChange(g_useWhitelist, ConVarChangeEnabled);
 	HookConVarChange(g_allowBannedPlayers, ConVarChangeBanCheck);
 	HookConVarChange(g_gamemode, ConVarChangeGamemode);
@@ -207,6 +210,45 @@ public Action TeamSayHook(int client, int args) {
 		
 	}
 	return Plugin_Continue;
+}
+
+// taken from https://github.com/erynnb/pugchamp
+public void Event_NameChange(Event event, const char[] name, bool dontBroadcast) {
+    int client = GetClientOfUserId(event.GetInt("userid"));
+
+    if (!IsClientReplay(client) && !IsClientSourceTV(client)) {
+        char newName[32];
+        event.GetString("newname", newName, sizeof(newName));
+
+        char steamID[32];
+        GetClientAuthId(client, AuthId_SteamID64, steamID, sizeof(steamID));
+
+        char playerName[32];
+        if (playerNames.GetString(steamID, playerName, sizeof(playerName))) {
+            if (!StrEqual(newName, playerName)) {
+                SetClientName(client, playerName);
+            }
+        }
+    }
+}
+ 
+// taken from https://github.com/erynnb/pugchamp
+public Action UserMessage_SayText2(UserMsg msg_id, BfRead msg, const int[] players, int playersNum, bool reliable, bool init) {
+    char buffer[512];
+
+    if (!reliable) {
+        return Plugin_Continue;
+    }
+
+    msg.ReadByte();
+    msg.ReadByte();
+    msg.ReadString(buffer, sizeof(buffer), false);
+
+    if (StrContains(buffer, "#TF_Name_Change") != -1) {
+        return Plugin_Handled;
+    }
+
+    return Plugin_Continue;
 }
 
 public Action GetGameDirHook(Event event, const char[] name, bool dontBroadcast) {
@@ -305,7 +347,7 @@ public void ConVarChangeGamemode(ConVar cvar, const char[] oldvalue, const char[
 public void ConVarChangeLeagues(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
 	int int_newvalue = StringToInt(newvalue);
 	int int_oldvalue = StringToInt(oldvalue);
-	if (int_newvalue == 0 || int_newvalue < 0 || int_newvalue > 3) {
+	if (int_newvalue <= 0 || int_newvalue > 3) {
 		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (RGL+ETF2L)");
 		SetConVarString(cvar, "3");
 		return;
@@ -396,9 +438,8 @@ public void ConVarChangeID(ConVar cvar, const char[] oldvalue, const char[] newv
 }
 
 public void ConVarChangeFakePW(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
-	if (strcmp(oldvalue, newvalue, true) != 0) {
-		if (GetConVarBool(g_allowChatMessages))
-			PrintToChatAll("[SM]: Changed ringer/spec password");
+	if (strcmp(oldvalue, newvalue, true) != 0 && GetConVarBool(g_allowChatMessages)) {
+		PrintToChatAll("[SM]: Changed ringer/spec password");
 	}
 }
 
@@ -474,15 +515,16 @@ public void LeagueSuccessHelper(int client, int league) {
 	
 	if (div == 0 && GetConVarBool(g_allowBannedPlayers)) {
 		if (GetConVarBool(g_allowChatMessages))
-			PrintToChatAll("Player %s (%s league banned) is joining", league == LEAGUE_RGL ? "RGL" : "ETF2L", divisionNameTeamID[1]);
+			PrintToChatAll("Player %s (%s league banned) is joining", divisionNameTeamID[1], league == LEAGUE_RGL ? "RGL" : "ETF2L");
 		return;
 	}
 
-	char divs[64];
+	char allowed_divs[64];
 	char div_string[64];
-	GetConVarString(league == LEAGUE_RGL ? g_rglDivsAllowed : g_etf2lDivsAllowed, divs, 64);
-	IntToString(div, div_string, 64);
-	if (StrContains(divs, div_string, false) == -1) {	
+	GetConVarString(league == LEAGUE_RGL ? g_rglDivsAllowed : g_etf2lDivsAllowed, allowed_divs, sizeof(allowed_divs));
+	IntToString(div, div_string, sizeof(div_string));
+	
+	if (StrContains(allowed_divs, div_string, false) == -1) {	
 		if (GetConVarBool(g_allowKickedOutput) && GetConVarBool(g_allowChatMessages))
         		PrintToChatAll("%s player %s tried to join", league == LEAGUE_RGL ? "RGL" : "ETF2L", divisionNameTeamID[1]);
 		KickClient(client, "You are not an %s player in the currently whitelisted divisions", league == LEAGUE_RGL ? "RGL" : "ETF2L");
@@ -511,6 +553,7 @@ public void LeagueSuccessHelper(int client, int league) {
 			PrintToChatAll("%s player %s tried to join", league == LEAGUE_RGL ? "RGL" : "ETF2L", divisionNameTeamID[1]);	
 		KickClient(client, "You don't fit the current server's whitelist rules");
 	}
+	// May not stay over changelevel?
 	g_clientTeams[client] = StringToInt(divisionNameTeamID[2]);
 	if (GetConVarBool(g_useLeagueName))
 		SetClientName(client, divisionNameTeamID[1]);
@@ -600,19 +643,23 @@ public void GetRGLUserByID(const String:steamID[], int client) {
 
 public void OnClientAuthorized(int client, const char[] auth)
 {
-	// TODO more STV testing
-	if (IsClientSourceTV(client)) {
-		PrintToServer("STV joined");
+	if (IsClientReplay(client) || IsClientSourceTV(client)) {
+		PrintToServer("STV/Replay joined");
 		return;
 	}
 
 	char steamID[STEAMID_LENGTH];
-	GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
+	if (!GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH)_ {
+		KickClient(client, "Invalid steamID authorization, possibly retry");
+	};
 	PrintToServer("------steamid %s connected", steamID);
 
 	// Client's password
 	char password[MAX_PASSWORD_LENGTH + 1];
-	GetClientInfo(client, FAKE_PASSWORD_VAR, password, MAX_PASSWORD_LENGTH);
+	if(!GetClientInfo(client, FAKE_PASSWORD_VAR, password, MAX_PASSWORD_LENGTH)) {
+		PrintToServer("----Failed to get client password");
+		strcopy(password, 0, "");
+	}
 	PrintToServer("------Inputted 'pass': %s", password);
 
 	// Server controlled password

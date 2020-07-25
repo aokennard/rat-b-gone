@@ -1,5 +1,4 @@
 import os
-import time
 import requests
 try:
     from bs4 import BeautifulSoup
@@ -45,28 +44,22 @@ def get_gamemode_from_string(gamemode_str):
     gamemode = gamemode.rstrip()
     region = region.lstrip()
 
-    # ignore one day cups or weird stuff - also TODO cleanup later
+    # ignore one day cups or weird stuff - also TODO cleanup later, make easier for adding in cups or tourneys, etc
 
     if gamemode == "Prolander":
         if region == "North America":
             return RGL_LEAGUE_STRING_ID_MAP[gamemode]
-        return None
     if gamemode == "Highlander":
         if region == "NA Highlander":
             return RGL_LEAGUE_STRING_ID_MAP[gamemode]
-        return None
-    print(region)
     if gamemode == "Trad. Sixes":
         if region == "NA Traditional Sixes":
             return RGL_LEAGUE_STRING_ID_MAP[gamemode]
         if region == "yomps' Family Fundraiser":
-            print("aaa")
             return RGL_LEAGUE_STRING_ID_MAP["Yomps Tourney"]
-        return None
     if gamemode == "NR Sixes":
         if region == "No Restriction Sixes":
             return RGL_LEAGUE_STRING_ID_MAP[gamemode]
-        return None
     return None
 
 '''
@@ -106,83 +99,76 @@ def get_div_teamid_from_table(table):
 
 def get_rgl_data(steamid, gamemode):
 
-    if not os.path.exists("plwlog/"):
-        os.mkdir("plwlog/")
-
     # get and parse the player's page
     request = requests.get(RGL_SEARCH_URL.format(steamid, RGL_SEARCH_LEAGUE_TABLE[gamemode]))
     if not request:
-        with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
-            f.write("[RGL LOG:] Request failed!")
         return "request failure"
+
     soup = BeautifulSoup(request.content, features="lxml")
     if not soup:
-        with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
-            f.write("[RGL LOG:] Soup failure")
         return "soup fail"
+
     div_head = soup.find("div", {"class":"col-sm-9"})
     if not div_head:
-        with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
-            f.write("[RGL LOG:] sid {} couldn't load div".format(steamid))
         return "Page malformed or edge case found for pages"
+
     div_name = div_head.find("div", {"class":"page-header text-center"})
     if not div_name:
-        with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
-            f.write("[RGL LOG:] sid {} couldn't load div".format(steamid))
         return "Page malformed or edge case found for pages"
 
     # verify they exist
 
     placeholder = div_head.find(id="ContentPlaceHolder1_Main_hMessage")
     if not placeholder or placeholder.text.lstrip() == "Player does not exist in RGL":
-        with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
-            f.write("[RGL LOG:] sid {} not in RGL".format(steamid))
         return "Player not found"
 
     name, ban_status = get_name_banstatus_from_div(div_name)
     if name == None:
-        with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
-            f.write("[RGL LOG:] sid {} name not found in RGL".format(steamid))
         return "Name not found"
     if ban_status:
-        with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
-            f.write("[RGL LOG:] sid {} found, is banned".format(steamid))
         return ",".join(["banned", name, "banned"])
 
     # h3, hr, table is the format repeated
     league_types = div_head.find_all("h3")
     league_tables = div_head.find_all("table")
 
+    if league_tables is None or league_types is None:
+        return "Unknown user profile format"
+
     division = None
     team_id = None
-    # at end of league_types / h3's, there is a banhistory
+
+    # assume league tables are contiguous, so increment for each table we see to index into list of tables 
+    # I did this instead of zip incase of mismatched number of h3/tables, which can vary if someone is banned or has other stuff thats non-standard going on
     league_table_index = 0
-    for i, league_type_tag in enumerate(league_types):
+
+    # There is probably a more elegant way to iterate over multiple grouped (h3, hr, table) tags, but this works for now
+    for league_type_tag in league_types:
         league_type_span = league_type_tag.find("span")
+        if not league_type_span:
+            league_table_index += 1
+            continue
+        # located a table of some gamemode
         if league_type_span['id'] and league_type_span['id'].startswith("ContentPlaceHolder1_Main_rptLeagues_lblLeagueName"):
-            
             league_type_string = league_type_span.text
+            if not league_type_string:
+                league_table_index += 1
+                continue
             gamemode_str = get_gamemode_from_string(league_type_string)
-            print(gamemode_str)
             # process string to determine if correct gamemode
             if gamemode == gamemode_str:
                 league_table = league_tables[league_table_index]
                 division, team_id = get_div_teamid_from_table(league_table)
                 break
-            # assume league tables are contiguous
+            
             league_table_index += 1
     else:
-        with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
-            f.write("[RGL LOG:] sid {} not in correct gamemode".format(steamid))
         return "Couldn't find correct gamemode"
 
+    # We found you, but no active team I guess
     if division is None or team_id is None:
         division = ""
         team_id = ""
-        with open("plwlog/{}_faillog".format(time.time()), "w+") as f:
-            f.write("[RGL LOG:] sid {} not found with valid div/team, but in RGL".format(steamid))
         return ",".join([division, name, team_id])
     
-    with open("plwlog/{}_successlog".format(time.time()), "w+") as f:
-        f.write("[RGL LOG:] sid {} found!".format(steamid))
     return ",".join([division, name, team_id])
