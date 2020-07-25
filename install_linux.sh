@@ -30,9 +30,6 @@ fi
 
 cp scripting/* $SM_DIR/scripting/
 
-cp etf2lplayerdata.py $SM_DIR/scripting/
-cp rglplayerdata.py $SM_DIR/scripting/
-
 cd $SM_DIR
 ./scripting/spcomp autojoin.sp
 mkdir -p plugins/
