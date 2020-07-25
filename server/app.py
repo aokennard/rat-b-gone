@@ -1,14 +1,9 @@
-from flask import Flask, request
 import etf2lplayerdata
 import rglplayerdata
 
+from flask import Flask, request
 
 app = Flask(__name__)
-
-@app.route('/')
-def helloindex():
-    print("wuh")
-    return "Yee"
 
 @app.route('/leagueresolver')
 def resolve_steamid():
@@ -27,4 +22,4 @@ def resolve_steamid():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0")
+    app.run(host="0.0.0.0")
