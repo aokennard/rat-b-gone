@@ -308,8 +308,8 @@ public void ConVarChangeBanCheck(ConVar cvar, const char[] oldvalue, const char[
 
 public void ConVarChangeGamemode(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
 	// make better value checking for HL/6s
-	if (strlen(newvalue) != 1 || (newvalue[0] != '1' && newvalue[0] != '2')) {
-		PrintToChatAll("[SM]: Invalid plugin mode, setting to default (6s)");
+	if (strlen(newvalue) != 1 || (newvalue[0] != '1' && newvalue[0] != '2' && newvalue[0] != '4')) {
+		PrintToChatAll("[SM]: Invalid plugin mode (%d), setting to default (6s)", newvalue[0]);
 		SetConVarString(cvar, "2");
 		return;
 	}
@@ -319,7 +319,7 @@ public void ConVarChangeGamemode(ConVar cvar, const char[] oldvalue, const char[
 		return;
 	}
 	if (GetConVarBool(g_allowChatMessages))
-		PrintToChatAll("[SM]: %s based whitelist", int_newvalue == GAMEMODE_HL ? "HL" : int_newvalue == GAMEMODE_6S ? "6s" : "Unknown");
+		PrintToChatAll("[SM]: %s based whitelist", int_newvalue == GAMEMODE_HL ? "HL" : int_newvalue == GAMEMODE_6S ? "6s" : "Yomps tourney");
 }
 
 public void ConVarChangeLeagues(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
