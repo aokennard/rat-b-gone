@@ -561,7 +561,8 @@ public void LeagueSuccessHelper(int client, int league) {
 	if (StrContains(allowed_divs, div_string, false) == -1) {	
 		if (GetConVarBool(g_allowKickedOutput) && GetConVarBool(g_allowChatMessages))
         		PrintToChatAll("%s player %s tried to join", league == LEAGUE_RGL ? "RGL" : "ETF2L", divisionNameTeamID[1]);
-		KickClient(client, "You are not an %s player in the currently whitelisted divisions", league == LEAGUE_RGL ? "RGL" : "ETF2L");
+		if (!(GetConVarInt(g_leaguesAllowed) == LEAGUE_ALL && league == LEAGUE_RGL))
+			KickClient(client, "You are not a %s player in the currently whitelisted divisions", GetConVarInt(g_leaguesAllowed) == LEAGUE_ALL ? "RGL/ETF2L" : GetConVarInt(g_leaguesAllowed) == LEAGUE_RGL ? "RGL" : "ETF2L");
 		return;
 	}
 
