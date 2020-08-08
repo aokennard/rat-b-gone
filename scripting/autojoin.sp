@@ -565,7 +565,7 @@ public void LeagueSuccessHelper(int client, int league) {
 			KickClient(client, "You are not a %s player in the currently whitelisted divisions", GetConVarInt(g_leaguesAllowed) == LEAGUE_ALL ? "RGL/ETF2L" : GetConVarInt(g_leaguesAllowed) == LEAGUE_RGL ? "RGL" : "ETF2L");
 		else if (GetConVarInt(g_leaguesAllowed) == LEAGUE_ALL && league == LEAGUE_RGL) {
 			char steamID[STEAMID_LENGTH];
-			GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH)
+			GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
 			GetETF2LUserByID(steamID, client);
 		}
 			
