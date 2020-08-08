@@ -563,6 +563,12 @@ public void LeagueSuccessHelper(int client, int league) {
         		PrintToChatAll("%s player %s tried to join", league == LEAGUE_RGL ? "RGL" : "ETF2L", divisionNameTeamID[1]);
 		if (!(GetConVarInt(g_leaguesAllowed) == LEAGUE_ALL && league == LEAGUE_RGL))
 			KickClient(client, "You are not a %s player in the currently whitelisted divisions", GetConVarInt(g_leaguesAllowed) == LEAGUE_ALL ? "RGL/ETF2L" : GetConVarInt(g_leaguesAllowed) == LEAGUE_RGL ? "RGL" : "ETF2L");
+		else if (GetConVarInt(g_leaguesAllowed) == LEAGUE_ALL && league == LEAGUE_RGL) {
+			char steamID[STEAMID_LENGTH];
+			GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH)
+			GetETF2LUserByID(steamID, client);
+		}
+			
 		return;
 	}
 
@@ -720,7 +726,7 @@ public void OnClientAuthorized(int client, const char[] auth)
 	// if RGL / all, check RGL first (then check etf2l)
 	if (GetConVarInt(g_leaguesAllowed) & LEAGUE_RGL) {
 		GetRGLUserByID(steamID, client); 
-	} else if (GetConVarInt(g_leaguesAllowed) & LEAGUE_ETF2L) {
+	} if (GetConVarInt(g_leaguesAllowed) & LEAGUE_ETF2L) {
 		GetETF2LUserByID(steamID, client);
 	}
 }
