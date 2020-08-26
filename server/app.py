@@ -14,7 +14,7 @@ def resolve_steamid():
     output = "Invalid league"
 
     if league == "RGL":
-        output = rglplayerdata.get_rgl_data(steamid, gamemode)
+        output = rglplayerdata.get_rgl_data(steamid, gamemode, True)
     elif league == "ETF2L":
         output = etf2lplayerdata.get_etf2l_data(steamid, gamemode)
 
