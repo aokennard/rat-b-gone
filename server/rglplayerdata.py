@@ -67,14 +67,14 @@ def get_gamemode_from_string(gamemode_str):
     Output: a pair of (the division of the most recent active team the player's on for table's gamemode, the id of said team)
 '''
 
-def get_div_teamid_from_table(table):
+def get_div_teamid_from_table(table, use_most_recent_team):
     division = None
     team_id = None
     try:
         # first is a header
         rows = table.find_all("tr")[1:] 
         # if it's green then it's active
-        if rows[0].has_attr('style') and rows[0]['style'] == 'background-color: #B9DFCD':
+        if use_most_recent_team or (rows[0].has_attr('style') and rows[0]['style'] == 'background-color: #B9DFCD'):
             most_recent_cols = rows[0].find_all('td')
             # I think for now all I care about is the first one, but some stuff may be placeholders for later
             division = most_recent_cols[1].text.strip()
@@ -97,7 +97,7 @@ def get_div_teamid_from_table(table):
 '''
 
 
-def get_rgl_data(steamid, gamemode):
+def get_rgl_data(steamid, gamemode, use_recent_team=False):
 
     # get and parse the player's page
     request = requests.get(RGL_SEARCH_URL.format(steamid, RGL_SEARCH_LEAGUE_TABLE[gamemode]))
@@ -158,7 +158,7 @@ def get_rgl_data(steamid, gamemode):
             # process string to determine if correct gamemode
             if gamemode == gamemode_str:
                 league_table = league_tables[league_table_index]
-                division, team_id = get_div_teamid_from_table(league_table)
+                division, team_id = get_div_teamid_from_table(league_table, use_recent_team)
                 break
             
             league_table_index += 1
