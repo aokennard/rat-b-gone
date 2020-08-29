@@ -498,7 +498,7 @@ public int ETF2LDivisionToInt(char tier[64]) {
 }
 
 public int RGLDivisionToInt(char div[64]) {
-	if (strncmp(div, "Invite", 6, false) == 0)
+	if (strncmp(div, "Invite", 6, false) == 0 || strncmp(div, "Admin Placement", 15, false) == 0)
 		return RGL_DIV_INVITE;
 	if (strncmp(div, "Div-1", 5, false) == 0)
 		return RGL_DIV_1;
