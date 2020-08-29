@@ -40,6 +40,7 @@ This plugin restricts who can join a server based on a few variables.
 
 ## WIP
 
+Fix pre-season not working due to player profiles being down
 Verify installer
 More support + testing for specific gamemodes (6s, HL, etc) + multiple gamemode support at same time
 More ETF2L testing (thanks Zesty!)  

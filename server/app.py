@@ -18,6 +18,7 @@ def resolve_steamid():
     elif league == "ETF2L":
         output = etf2lplayerdata.get_etf2l_data(steamid, gamemode)
 
+    print("League: {}, out: {}".format(league, output))
     return output
 
 
