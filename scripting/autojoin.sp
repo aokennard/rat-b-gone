@@ -72,7 +72,6 @@ ConVar g_allowKickedOutput;
 ConVar g_allowJoinOutput;
 ConVar g_pugMode;
 ConVar g_leagueResolverURL;
-ConVar g_teamExecCommands;
 ConVar g_useLeagueName;
 
 char g_cURLResponseBuffer[1024];
@@ -165,7 +164,6 @@ public OnPluginStart()
 	HookConVarChange(g_ringerPassword, ConVarChangeFakePW);
 	HookConVarChange(g_pugMode, ConVarChangePug);
 	HookConVarChange(g_allowKickedOutput, ConVarChangeKick);	
-	HookConVarChange(g_teamExecCommands, ConVarChangeExec);
 	HookConVarChange(g_useLeagueName, ConVarChangeLeagueAlias);
 	HookConVarChange(g_allowJoinOutput, ConVarChangeJoin);
 	PrintToServer("Competitive Player Whitelist loaded");
