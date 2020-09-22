@@ -81,7 +81,7 @@ char g_cURLResponseBuffer[1024];
 char g_sourcemodPath[400];
 
 StringMap playerNames;
-StringMap playerTeams;
+//StringMap playerTeams;
 
 char IntToETF2LDivision[MAX_ETF2L_DIV_INT + 1][] = {"banned", "Prem", "Division 1", "Division 2", "Division 3", "Division 4"};
 char IntToRGLDivision[MAX_RGL_DIV_INT + 1][] = {"banned", "Invite", "Division 1", "Division 2", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement"};
@@ -145,7 +145,7 @@ public OnPluginStart()
 	g_leagueResolverURL = CreateConVar("plw_leaguechecker_url", DEFAULT_CHECKER_URL, "The URL of a server which can resolve requests of 'steamid' to whether the player is valid");
 
 	playerNames = new StringMap();
-	playerTeams = new StringMap();
+	//playerTeams = new StringMap();
 
 	HookEvent("server_spawn", GetGameDirHook);
 	HookEvent("player_connect", ConnectSilencer, EventHookMode_Pre);
@@ -485,7 +485,7 @@ public int DivisionToInt(char div_string[64], int league_type) {
 
 public int ETF2LDivisionToInt(char tier[64]) {
 	for (int i = 0; i < MAX_ETF2L_DIV_INT; i++) {
-		if (strncmp(div, IntToETF2LDivision[i], strlen(IntToETF2LDivision[i]), false) == 0) {
+		if (strncmp(tier, IntToETF2LDivision[i], strlen(IntToETF2LDivision[i]), false) == 0) {
 			return i;
 		}
 	}
@@ -506,7 +506,7 @@ public void LeagueSuccessHelper(int client, int league) {
 	ExplodeString(g_cURLResponseBuffer, ",", divisionNameTeamID, 3, 64);
 
 	PrintToServer("div: %s name: %s teamid: %s", divisionNameTeamID[0], divisionNameTeamID[1], divisionNameTeamID[2]);
-	int div = DivisionToInt(divisionNameTeamID[0]);
+	int div = DivisionToInt(divisionNameTeamID[0], league);
 	
 	// Invalid / unknown div
 	if (div == -1) {
