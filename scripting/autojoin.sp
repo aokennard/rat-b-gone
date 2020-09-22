@@ -24,8 +24,8 @@
 #define MAX_PASSWORD_LENGTH 255
 #define DEFAULT_BUFFER_SIZE 512
 
-#define MAX_DIV_CHAR '7'
-#define MAX_DIV_INT 7
+#define MAX_DIV_CHAR '8'
+#define MAX_RGL_DIV_INT 8
 #define RGL_DIV_INVITE 0x1
 #define RGL_DIV_1 0x2
 #define RGL_DIV_2 0x3
@@ -33,9 +33,12 @@
 #define RGL_DIV_INT 0x5
 #define RGL_DIV_AMA 0x6
 #define RGL_DIV_NEW 0x7
-#define RGL_DIV_ALL "1,2,3,4,5,6,7"
+#define RGL_DIV_ADMIN_PLACEMENT 0x8
+#define RGL_DIV_ALL "1,2,3,4,5,6,7,8"
 
 // idk how etf2l works now, lowest tier I saw was 4
+#define MAX_ETF2L_DIV_CHAR '5'
+#define MAX_ETF2L_DIV_INT 5
 #define ETF2L_DIV_PREM 0x1
 #define ETF2L_DIV_1 0x2
 #define ETF2L_DIV_2 0x3
@@ -80,8 +83,8 @@ char g_sourcemodPath[400];
 StringMap playerNames;
 StringMap playerTeams;
 
-char IntToETF2LDivision[5][] = {"Prem", "Division 1", "Division 2", "Division 3", "Division 4"};
-char IntToRGLDivision[7][] = {"Invite", "Division 1", "Division 2", "Main", "Intermediate", "Amateur", "Newcomer"};
+char IntToETF2LDivision[MAX_ETF2L_DIV_INT + 1][] = {"banned", "Prem", "Division 1", "Division 2", "Division 3", "Division 4"};
+char IntToRGLDivision[MAX_RGL_DIV_INT + 1][] = {"banned", "Invite", "Division 1", "Division 2", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement"};
 char KickMessages[7][] = {"You are not an RGL player in the currently whitelisted divisions",
 						 "You are not an ETF2L player in the currently whitelisted divisions",
 						 "You aren't currently in the team whitelist",
@@ -394,8 +397,8 @@ public void ConVarChangeDivs(ConVar cvar, const char[] oldvalue, const char[] ne
 		}
 		if (GetConVarBool(g_allowChatMessages))
 			PrintToChatAll("[SM]: Whitelisted RGL divs:");
-		char split_buffer[MAX_DIV_INT][64];
-		int n_divs = ExplodeString(newvalue, ",", split_buffer, MAX_DIV_INT, 64, false);
+		char split_buffer[MAX_RGL_DIV_INT][64];
+		int n_divs = ExplodeString(newvalue, ",", split_buffer, MAX_RGL_DIV_INT, 64, false);
 		for (int i = 0; i < n_divs; i++) {
 			if (strlen(split_buffer[i]) != 1) 
 				continue;
@@ -476,42 +479,25 @@ public void PrintJoinString(const char[] name, const char[] division, int league
 	}
 }
 
+public int DivisionToInt(char div_string[64], int league_type) {
+	return league_type == LEAGUE_RGL ? RGLDivisionToInt(div_string) : ETF2LDivisionToInt(div_string);
+}
+
 public int ETF2LDivisionToInt(char tier[64]) {
-	if (strncmp(tier, "banned", 6, false) == 0) {
-		return 0x0;
-	}
-	switch (tier[0]) {
-		case '0':
-			return ETF2L_DIV_PREM;
-		case '1':
-			return ETF2L_DIV_1;
-		case '2':
-			return ETF2L_DIV_2;
-		case '3':
-			return ETF2L_DIV_3;
-		case '4':
-			return ETF2L_DIV_4;
+	for (int i = 0; i < MAX_ETF2L_DIV_INT; i++) {
+		if (strncmp(div, IntToETF2LDivision[i], strlen(IntToETF2LDivision[i]), false) == 0) {
+			return i;
+		}
 	}
 	return -1;
 }
 
 public int RGLDivisionToInt(char div[64]) {
-	if (strncmp(div, "Invite", 6, false) == 0 || strncmp(div, "Admin Placement", 15, false) == 0)
-		return RGL_DIV_INVITE;
-	if (strncmp(div, "Div-1", 5, false) == 0)
-		return RGL_DIV_1;
-	if (strncmp(div, "Div-2", 5, false) == 0)
-		return RGL_DIV_2;
-	if (strncmp(div, "Main", 4, false) == 0)
-		return RGL_DIV_MAIN;
-	if (strncmp(div, "Intermediate", 12, false) == 0)
-		return RGL_DIV_INT;
-	if (strncmp(div, "Amateur", 7, false) == 0)
-		return RGL_DIV_AMA;
-	if (strncmp(div, "Newcomer", 8, false) == 0)
-		return RGL_DIV_NEW;
-	if (strncmp(div, "banned", 6, false) == 0)
-		return 0x0;
+	for (int i = 0; i < MAX_RGL_DIV_INT; i++) {
+		if (strncmp(div, IntToRGLDivision[i], strlen(IntToRGLDivision[i]), false) == 0) {
+			return i;
+		}
+	}
 	return -1;
 }
 
@@ -520,7 +506,7 @@ public void LeagueSuccessHelper(int client, int league) {
 	ExplodeString(g_cURLResponseBuffer, ",", divisionNameTeamID, 3, 64);
 
 	PrintToServer("div: %s name: %s teamid: %s", divisionNameTeamID[0], divisionNameTeamID[1], divisionNameTeamID[2]);
-	int div = (league == LEAGUE_RGL ? RGLDivisionToInt(divisionNameTeamID[0]) : ETF2LDivisionToInt(divisionNameTeamID[0]));
+	int div = DivisionToInt(divisionNameTeamID[0]);
 	
 	// Invalid / unknown div
 	if (div == -1) {
