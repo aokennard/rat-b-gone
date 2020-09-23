@@ -404,8 +404,8 @@ public void ConVarChangeDivs(ConVar cvar, const char[] oldvalue, const char[] ne
 				continue;
 			if (GetConVarBool(g_allowChatMessages))
 				PrintToChatAll("[SM]: %s", cvar == g_rglDivsAllowed ? 
-										IntToRGLDivision[(split_buffer[i][0] - '0') - 1] :
-										IntToETF2LDivision[(split_buffer[i][0] - '0') - 1]);
+										IntToRGLDivision[(split_buffer[i][0] - '0')]:
+										IntToETF2LDivision[(split_buffer[i][0] - '0')]);
 		}
 	}
 }
