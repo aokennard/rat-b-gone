@@ -11,8 +11,10 @@ GAMEMODE_MAP = {'1' : 'Highlander', '2' : '6on6'}
 
 def get_etf2l_data(steamid, gamemode):
 
-    resp = requests.get(ETF2L_PLAYER_API_URL.format(steamid))
-
+    try:
+        resp = requests.get(ETF2L_PLAYER_API_URL.format(steamid))
+    except Exception:
+        return "request exception"
     if resp.status_code != 200:
         return "request failed"
 

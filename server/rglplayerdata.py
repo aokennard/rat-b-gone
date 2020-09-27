@@ -100,7 +100,10 @@ def get_div_teamid_from_table(table, use_most_recent_team):
 def get_rgl_data(steamid, gamemode, use_recent_team=False):
 
     # get and parse the player's page
-    request = requests.get(RGL_SEARCH_URL.format(steamid, RGL_SEARCH_LEAGUE_TABLE[gamemode]))
+    try:
+        request = requests.get(RGL_SEARCH_URL.format(steamid, RGL_SEARCH_LEAGUE_TABLE[gamemode]))
+    except Exception:
+        return "requests exception"
     if not request or request.status_code != 200:
         return "request failure"
 

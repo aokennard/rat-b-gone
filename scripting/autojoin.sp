@@ -10,7 +10,7 @@
 
 #include "plw_plugin_version"
 
-#define USING_LEAGUE_CACHING 1
+int USING_LEAGUE_CACHING = 1;
 
 // witness gaming
 #define HOME_TEAM_ID 7203
@@ -71,7 +71,7 @@ ConVar g_dbReconnectInterval;
 char g_leagueResponseBuffer[1024];
 char g_sourcemodPath[400];
 
-Timer g_DBReconnectTimer;
+Handle g_DBReconnectTimer;
 Database sql_db;
 
 StringMap playerNames;
@@ -181,13 +181,13 @@ public Action Timer_DBReconnect(Handle timer) {
 }
 
 // mgemod
-public SQLErrorCheckCallback(Handle owner, Handle hndl, const char error[], any data) {
+public SQLErrorCheckCallback(Handle owner, Handle hndl, const String:error[], any data) {
 	if (!StrEqual("", error)) {
 		PrintToServer("%s Query failed: %s", error);
 		PrintToServer("%s Retrying DB connection in %i minutes", g_dbReconnectInterval);
 		
 		if (g_DBReconnectTimer == INVALID_HANDLE) {
-			g_DBReconnectTimer = CreateTimer(float(60 * g_dbReconnectInterval), Timer_DBReconnect, TIMER_FLAG_NO_MAPCHANGE);
+			g_DBReconnectTimer = CreateTimer(float(60 * g_dbReconnectInterval), Timer_DBReconnect, 0, TIMER_FLAG_NO_MAPCHANGE);
 		}
 	}
 	// Could add a test / different call back for error handling, query all people in server to check if they exist in cache?
@@ -196,11 +196,11 @@ public SQLErrorCheckCallback(Handle owner, Handle hndl, const char error[], any 
 public void SetupSQLCache() {
 	char error[256];
 
-	sql_db = SQL_Connect("league-cache", true, error, sizeof(error));
+	sql_db = SQL_Connect("storage-local", true, error, sizeof(error));
 	if (sql_db == INVALID_HANDLE) {
 		SetFailState("Couldn't connect to database: %s", error);
 	} else {
-		PrintToServer("%s Success, using SQLite league-cache", SERVER_PRINT_PREFIX);
+		PrintToServer("%s Success, using SQLite storage-local", SERVER_PRINT_PREFIX);
 	}
 
 	SQL_TQuery(sql_db, SQLErrorCheckCallback, "CREATE TABLE IF NOT EXISTS league_player_cache (steamid TEXT PRIMARY KEY, division TEXT, name TEXT, teamid INTEGER, league INTEGER)");
@@ -681,6 +681,7 @@ public void GetETF2LUserByID(const String:steamID[], int client) {
 	SetupCurlRequest(steamID, client, LEAGUE_ETF2L);
 }
 
+// side effect of clearing g_leagueResponseBuffer
 public bool GetSteamIDInCache(const String:steamID[], int league_type) {
 	char query[256];
 
@@ -689,14 +690,19 @@ public bool GetSteamIDInCache(const String:steamID[], int league_type) {
 	// If this causes server lag, may need async callback w/ T_Query
 	DBResultSet playerDBRS = SQL_Query(sql_db, query, sizeof(query));
 
+	PrintToServer("Queried, steamID: %s", steamID);
+
 	if (playerDBRS == null) {
 		return false;
 	}
+
+	strcopy(g_leagueResponseBuffer, sizeof(g_leagueResponseBuffer), "");
 
 	char buffer[64];
 	for (int i = 0; i < 3; i++) {
 		playerDBRS.FetchString(i, buffer, sizeof(buffer));
 		StrCat(g_leagueResponseBuffer, sizeof(g_leagueResponseBuffer), buffer);
+		StrCat(g_leagueResponseBuffer, sizeof(g_leagueResponseBuffer), ",");
 	}
 	return true;
 }
@@ -711,7 +717,7 @@ public void SetSteamIDInCache(const String:steamID[], int league_type, char divi
 																			divisionNameTeamID[1], 
 																			StringToInt(divisionNameTeamID[2]),
 																			league_type);
-	SQL_Query(sql_db, SQLErrorCheckCallback, query);
+	SQL_TQuery(sql_db, SQLErrorCheckCallback, query);
 }
 
 public void RGLGetPlayerDataCallback(Handle hCurl, CURLcode code, any data) {
