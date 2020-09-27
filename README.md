@@ -4,6 +4,7 @@ A SourcePawn plugin that verifies connecting players play in RGL / ETF2L TF2 lea
 
 ## Install
 This uses Metamod/SourceMod, a SourcePawn plugin, and Python 3. It was designed and tested on Ubuntu 16.04.
+The current linux installer (`./install_linux.sh`) should find addons/sourcemod if it exists and install the plugin itself
 
 ### Python 3
 This uses Python 3's BeautifulSoup, lxml, and Flask module, the other libraries are standard.  
@@ -37,10 +38,10 @@ This plugin restricts who can join a server based on a few variables.
 - `plw_pugmode`: Disables whitelist (assumes not everyone in RGL), sets a default `sv_password`  
 - `plw_leaguechecker_url`: (Testing) the URL to point to a server which resolves a steamid for RGL/ETF2L via cURL
 - `plw_use_league_alias`: (Testing) Force players in server to use competitive league alias
+- `plw_db_reconnect_time`: (Testing) Time in minutes before reconnect to SQL player cache
 
 ## WIP
-
-Fix pre-season not working due to player profiles being down (cache?)
+Test cache / fallback store of data
 Verify installer
 More support + testing for specific gamemodes (6s, HL, etc) + multiple gamemode support at same time
 More ETF2L testing (thanks Zesty!)  

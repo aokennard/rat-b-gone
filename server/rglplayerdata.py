@@ -101,7 +101,7 @@ def get_rgl_data(steamid, gamemode, use_recent_team=False):
 
     # get and parse the player's page
     request = requests.get(RGL_SEARCH_URL.format(steamid, RGL_SEARCH_LEAGUE_TABLE[gamemode]))
-    if not request:
+    if not request or request.status_code != 200:
         return "request failure"
 
     soup = BeautifulSoup(request.content, features="lxml")

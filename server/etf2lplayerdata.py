@@ -13,6 +13,9 @@ def get_etf2l_data(steamid, gamemode):
 
     resp = requests.get(ETF2L_PLAYER_API_URL.format(steamid))
 
+    if resp.status_code != 200:
+        return "request failed"
+
     resp_json = json.loads(resp.text)
 
     status = resp_json["status"]["code"]

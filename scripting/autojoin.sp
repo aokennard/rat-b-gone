@@ -10,8 +10,12 @@
 
 #include "plw_plugin_version"
 
-// barbancle
-#define HOME_TEAM_ID 6602
+#define USING_LEAGUE_CACHING 1
+
+// witness gaming
+#define HOME_TEAM_ID 7203
+
+#define SERVER_PRINT_PREFIX "[Player Whitelist]"
 
 #define FAKE_PASSWORD_VAR "cl_team"
 #define DEFAULT_FAKE_PW "ringer"
@@ -22,28 +26,14 @@
 
 #define STEAMID_LENGTH 32
 #define MAX_PASSWORD_LENGTH 255
-#define DEFAULT_BUFFER_SIZE 512
 
 #define MAX_DIV_CHAR '8'
 #define MAX_RGL_DIV_INT 8
-#define RGL_DIV_INVITE 0x1
-#define RGL_DIV_1 0x2
-#define RGL_DIV_2 0x3
-#define RGL_DIV_MAIN 0x4
-#define RGL_DIV_INT 0x5
-#define RGL_DIV_AMA 0x6
-#define RGL_DIV_NEW 0x7
-#define RGL_DIV_ADMIN_PLACEMENT 0x8
 #define RGL_DIV_ALL "1,2,3,4,5,6,7,8"
 
 // idk how etf2l works now, lowest tier I saw was 4
 #define MAX_ETF2L_DIV_CHAR '5'
 #define MAX_ETF2L_DIV_INT 5
-#define ETF2L_DIV_PREM 0x1
-#define ETF2L_DIV_1 0x2
-#define ETF2L_DIV_2 0x3
-#define ETF2L_DIV_3 0x4
-#define ETF2L_DIV_4 0x5
 #define ETF2L_DIV_ALL "1,2,3,4,5"
 
 #define MODE_TEAMONLY 0x0
@@ -75,10 +65,14 @@ ConVar g_allowKickedOutput;
 ConVar g_allowJoinOutput;
 ConVar g_pugMode;
 ConVar g_leagueResolverURL;
-ConVar g_useLeagueName;
+ConVar g_useLeagueName; // WIP
+ConVar g_dbReconnectInterval;
 
-char g_cURLResponseBuffer[1024];
+char g_leagueResponseBuffer[1024];
 char g_sourcemodPath[400];
+
+Timer g_DBReconnectTimer;
+Database sql_db;
 
 StringMap playerNames;
 //StringMap playerTeams;
@@ -144,6 +138,12 @@ public OnPluginStart()
 
 	g_leagueResolverURL = CreateConVar("plw_leaguechecker_url", DEFAULT_CHECKER_URL, "The URL of a server which can resolve requests of 'steamid' to whether the player is valid");
 
+	g_dbReconnectInterval = CreateConVar("plw_db_reconnect_time", "1", "The time it takes to attempt a reconnect to the SQL cache");
+
+	if (USING_LEAGUE_CACHING) {
+		SetupSQLCache();
+	}
+
 	playerNames = new StringMap();
 	//playerTeams = new StringMap();
 
@@ -169,13 +169,51 @@ public OnPluginStart()
 	HookConVarChange(g_allowKickedOutput, ConVarChangeKick);	
 	HookConVarChange(g_useLeagueName, ConVarChangeLeagueAlias);
 	HookConVarChange(g_allowJoinOutput, ConVarChangeJoin);
-	PrintToServer("Competitive Player Whitelist loaded");
+	PrintToServer("%s Competitive Player Whitelist loaded", SERVER_PRINT_PREFIX);
+}
+
+public Action Timer_DBReconnect(Handle timer) {
+	g_DBReconnectTimer = INVALID_HANDLE;
+
+	char query[256];
+	Format(query, sizeof(query), "SELECT steamid FROM league_player_cache WHERE league=1 LIMIT 1");
+	SQL_TQuery(sql_db, SQLErrorCheckCallback, query);
+}
+
+// mgemod
+public SQLErrorCheckCallback(Handle owner, Handle hndl, const char error[], any data) {
+	if (!StrEqual("", error)) {
+		PrintToServer("%s Query failed: %s", error);
+		PrintToServer("%s Retrying DB connection in %i minutes", g_dbReconnectInterval);
+		
+		if (g_DBReconnectTimer == INVALID_HANDLE) {
+			g_DBReconnectTimer = CreateTimer(float(60 * g_dbReconnectInterval), Timer_DBReconnect, TIMER_FLAG_NO_MAPCHANGE);
+		}
+	}
+	// Could add a test / different call back for error handling, query all people in server to check if they exist in cache?
+}
+
+public void SetupSQLCache() {
+	char error[256];
+
+	sql_db = SQL_Connect("league-cache", true, error, sizeof(error));
+	if (sql_db == INVALID_HANDLE) {
+		SetFailState("Couldn't connect to database: %s", error);
+	} else {
+		PrintToServer("%s Success, using SQLite league-cache", SERVER_PRINT_PREFIX);
+	}
+
+	SQL_TQuery(sql_db, SQLErrorCheckCallback, "CREATE TABLE IF NOT EXISTS league_player_cache (steamid TEXT PRIMARY KEY, division TEXT, name TEXT, teamid INTEGER, league INTEGER)");
 }
 
 public void OnMapStart() {
 	//playerNames.Clear();
 	//playerTeams.Clear();
 } 
+
+public void OnMapEnd() {
+	g_DBReconnectTimer = INVALID_HANDLE;
+}
 
 public Action ConnectSilencer(Event event, const char[] name, bool dontBroadcast) {
 	if (GetConVarBool(g_allowJoinOutput)) {
@@ -199,7 +237,7 @@ public Action KickSilencer(Event event, const char[] name, bool dontBroadcast) {
 				}
 			}
 			
-			PrintToServer("reason: %s", disconnectReason);
+			PrintToServer("%s reason: %s", SERVER_PRINT_PREFIX, disconnectReason);
 		}
 	}
 
@@ -502,15 +540,18 @@ public int RGLDivisionToInt(char div[64]) {
 }
 
 public void LeagueSuccessHelper(int client, int league) {
+	
 	char divisionNameTeamID[3][64]; // (div, rgl_name, team id)
-	ExplodeString(g_cURLResponseBuffer, ",", divisionNameTeamID, 3, 64);
+	ExplodeString(g_leagueResponseBuffer, ",", divisionNameTeamID, 3, 64);
+	char steamID[STEAMID_LENGTH];
+	GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
 
-	PrintToServer("div: %s name: %s teamid: %s", divisionNameTeamID[0], divisionNameTeamID[1], divisionNameTeamID[2]);
+	PrintToServer("%s div: %s name: %s teamid: %s", SERVER_PRINT_PREFIX, divisionNameTeamID[0], divisionNameTeamID[1], divisionNameTeamID[2]);
 	int div = DivisionToInt(divisionNameTeamID[0], league);
 	
 	// Invalid / unknown div
 	if (div == -1) {
-		PrintToServer("Unexpected tier, check up on it - likely not on a team");
+		PrintToServer("%s Unexpected tier, check up on it - likely not on a team", SERVER_PRINT_PREFIX);
 		strcopy(divisionNameTeamID[0], 6, "No div");
 		strcopy(divisionNameTeamID[2], 2, "-1");
 	}
@@ -519,6 +560,7 @@ public void LeagueSuccessHelper(int client, int league) {
 	if (div == 0 && GetConVarBool(g_allowBannedPlayers)) {
 		if (GetConVarBool(g_allowChatMessages))
 			PrintToChatAll("Player %s (%s league banned) is joining", divisionNameTeamID[1], league == LEAGUE_RGL ? "RGL" : "ETF2L");
+		SetSteamIDInCache(steamID, league, divisionNameTeamID);
 		return;
 	}
 
@@ -536,12 +578,13 @@ public void LeagueSuccessHelper(int client, int league) {
 			KickClient(client, "You are not a %s player in the currently whitelisted divisions", GetConVarInt(g_leaguesAllowed) == LEAGUE_ALL ? "RGL/ETF2L" : GetConVarInt(g_leaguesAllowed) == LEAGUE_RGL ? "RGL" : "ETF2L");
 		// If they only failed RGL check, still do ETF2L
 		else if (GetConVarInt(g_leaguesAllowed) == LEAGUE_ALL && league == LEAGUE_RGL) {
-			char steamID[STEAMID_LENGTH];
-			GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
 			GetETF2LUserByID(steamID, client);
 		}	
+		// cache here?
 		return;
 	}
+
+	SetSteamIDInCache(steamID, league, divisionNameTeamID);
 
 	// Validate they below to team / scrim / match ID, based on the mode.
 	if (MODE_TEAMONLY & GetConVarInt(g_serverMode)) {
@@ -580,18 +623,21 @@ public void LeagueSuccessHelper(int client, int league) {
 
 // we define 'success' as commas in the response as <div>,<name>,<teamid> is seen as success
 public bool GetResponseSuccess() {
-	int comma_index = FindCharInString(g_cURLResponseBuffer, ',', false);
+	int comma_index = FindCharInString(g_leagueResponseBuffer, ',', false);
 	return comma_index != -1;
 }
 
 public void ETF2LGetPlayerDataCallback(Handle hCurl, CURLcode code, any data) {
 	int client = data;
+	char steamID[STEAMID_LENGTH];
+	GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
+
 	if (code != CURLE_OK) {
 		char curlError[256];
 		curl_easy_strerror(code, curlError, sizeof(curlError));
 	} else {
 		bool success = GetResponseSuccess();
-		if (success) {
+		if (success || GetSteamIDInCache(steamID, LEAGUE_ETF2L)) {
 			LeagueSuccessHelper(client, LEAGUE_ETF2L);
 		} else {
 			if (GetConVarInt(g_leaguesAllowed) & LEAGUE_RGL) {
@@ -607,7 +653,7 @@ public void ETF2LGetPlayerDataCallback(Handle hCurl, CURLcode code, any data) {
 public void SetupCurlRequest(const String:steamID[], int client, int league) {
 	Handle hCurl = curl_easy_init();
 	if (hCurl == INVALID_HANDLE) {
-		PrintToServer("Invalid CURL handle on setup");
+		PrintToServer("%s Invalid CURL handle on setup", SERVER_PRINT_PREFIX);
 		return;
 	}
 
@@ -621,13 +667,13 @@ public void SetupCurlRequest(const String:steamID[], int client, int league) {
 
 	curl_easy_setopt_string(hCurl, CURLOPT_URL, local_leagueResolverURL);
 
-	strcopy(g_cURLResponseBuffer, sizeof(g_cURLResponseBuffer), "");
+	strcopy(g_leagueResponseBuffer, sizeof(g_leagueResponseBuffer), "");
 
 	curl_easy_perform_thread(hCurl, league == LEAGUE_RGL ? RGLGetPlayerDataCallback : ETF2LGetPlayerDataCallback, client);
 }
 
 public ReceiveData(Handle handle, const String:buffer[], const bytes, const nmemb) {
-	StrCat(g_cURLResponseBuffer, sizeof(g_cURLResponseBuffer), buffer);
+	StrCat(g_leagueResponseBuffer, sizeof(g_leagueResponseBuffer), buffer);
 	return bytes * nmemb;
 }
 
@@ -635,19 +681,53 @@ public void GetETF2LUserByID(const String:steamID[], int client) {
 	SetupCurlRequest(steamID, client, LEAGUE_ETF2L);
 }
 
+public bool GetSteamIDInCache(const String:steamID[], int league_type) {
+	char query[256];
+
+	Format(query, sizeof(query), "SELECT division,name,teamid FROM league_player_cache WHERE steamid='%s' AND league=%i", steamID, league_type);
+
+	// If this causes server lag, may need async callback w/ T_Query
+	DBResultSet playerDBRS = SQL_Query(sql_db, query, sizeof(query));
+
+	if (playerDBRS == null) {
+		return false;
+	}
+
+	char buffer[64];
+	for (int i = 0; i < 3; i++) {
+		playerDBRS.FetchString(i, buffer, sizeof(buffer));
+		StrCat(g_leagueResponseBuffer, sizeof(g_leagueResponseBuffer), buffer);
+	}
+	return true;
+}
+
+public void SetSteamIDInCache(const String:steamID[], int league_type, char divisionNameTeamID[3][64]) {
+	char query[256];
+
+	// not optimal but hey
+	Format(query, sizeof(query), "REPLACE INTO league_player_cache VALUES ('%s', '%s', '%s', %i, %i)", 
+																			steamID, 
+																			divisionNameTeamID[0], 
+																			divisionNameTeamID[1], 
+																			StringToInt(divisionNameTeamID[2]),
+																			league_type);
+	SQL_Query(sql_db, SQLErrorCheckCallback, query);
+}
+
 public void RGLGetPlayerDataCallback(Handle hCurl, CURLcode code, any data) {
 	int client = data;
+	char steamID[STEAMID_LENGTH];
+	GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
+
 	if (code != CURLE_OK) {
 		char curlError[256];
 		curl_easy_strerror(code, curlError, sizeof(curlError));
 	} else {
 		bool success = GetResponseSuccess();
-		if (success) {
+		if (success || GetSteamIDInCache(steamID, LEAGUE_RGL)) { 
 			LeagueSuccessHelper(client, LEAGUE_RGL);
 		} else {
 			if (GetConVarInt(g_leaguesAllowed) & LEAGUE_ETF2L) {
-				char steamID[STEAMID_LENGTH];
-				GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
 				GetETF2LUserByID(steamID, client);
 			} else {
 				KickClient(client, "You are not an RGL player");
@@ -664,23 +744,23 @@ public void GetRGLUserByID(const String:steamID[], int client) {
 public void OnClientAuthorized(int client, const char[] auth)
 {
 	if (IsClientReplay(client) || IsClientSourceTV(client)) {
-		PrintToServer("STV/Replay joined");
+		PrintToServer("%s STV/Replay joined", SERVER_PRINT_PREFIX);
 		return;
 	}
 
 	char steamID[STEAMID_LENGTH];
 	if (!GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH)) {
-		KickClient(client, "[PlayerWhitelist] Invalid steamID authorization, possibly retry");
+		KickClient(client, "Invalid steamID authorization, possibly retry");
 	}
-	PrintToServer("[PlayerWhitelist] steamID %s connected", steamID);
+	PrintToServer("%s steamID %s connected", SERVER_PRINT_PREFIX, steamID);
 
 	// Client's password
 	char password[MAX_PASSWORD_LENGTH + 1];
 	if(!GetClientInfo(client, FAKE_PASSWORD_VAR, password, MAX_PASSWORD_LENGTH)) {
-		PrintToServer("[PlayerWhitelist] Failed to get client password");
+		PrintToServer("%s Failed to get client password", SERVER_PRINT_PREFIX);
 		strcopy(password, 0, "");
 	}
-	PrintToServer("[PlayerWhitelist] Inputted 'pass': %s", password);
+	PrintToServer("%s Inputted 'pass': %s", SERVER_PRINT_PREFIX, password);
 
 	// Server controlled password
 	char fakePasswordBuf[MAX_PASSWORD_LENGTH + 1];
@@ -688,14 +768,14 @@ public void OnClientAuthorized(int client, const char[] auth)
 
 	if (strlen(password) > 0) {
 		if (strcmp(password, fakePasswordBuf, true) == 0) {
-			PrintToServer("[PlayerWhitelist] Joined via password");
+			PrintToServer("%s Joined via password", SERVER_PRINT_PREFIX);
 			return;
 		}
 	}
 
 	// if we aren't using whitelist
 	if (!GetConVarBool(g_useWhitelist)) {
-		PrintToServer("[PlayerWhitelist] Not using whitelist");
+		PrintToServer("%s Not using whitelist", SERVER_PRINT_PREFIX);
 		return;
 	}
 	// if RGL / all, check RGL first (then check etf2l)
