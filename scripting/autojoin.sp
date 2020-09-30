@@ -24,6 +24,7 @@ int USING_LEAGUE_CACHING = 1;
 #define DEFAULT_CHECKER_URL "pootis.org:5000/leagueresolver"
 #define RESOLVER_URL_PARAMETER_STR "?steamid=%s&gamemode=%d&league=%s"
 
+#define MAX_NUM_CLIENTS 24
 #define STEAMID_LENGTH 32
 #define MAX_PASSWORD_LENGTH 255
 
@@ -68,7 +69,8 @@ ConVar g_leagueResolverURL;
 ConVar g_useLeagueName; // WIP
 ConVar g_dbReconnectInterval;
 
-char g_leagueResponseBuffer[1024];
+
+char g_leagueResponseBuffer[MAX_NUM_CLIENTS][1024];
 char g_sourcemodPath[400];
 
 Handle g_DBReconnectTimer;
@@ -542,7 +544,7 @@ public int RGLDivisionToInt(char div[64]) {
 public void LeagueSuccessHelper(int client, int league) {
 	
 	char divisionNameTeamID[3][64]; // (div, rgl_name, team id)
-	ExplodeString(g_leagueResponseBuffer, ",", divisionNameTeamID, 3, 64);
+	ExplodeString(g_leagueResponseBuffer[client], ",", divisionNameTeamID, 3, 64);
 	char steamID[STEAMID_LENGTH];
 	GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
 
@@ -622,8 +624,8 @@ public void LeagueSuccessHelper(int client, int league) {
 }
 
 // we define 'success' as commas in the response as <div>,<name>,<teamid> is seen as success
-public bool GetResponseSuccess() {
-	int comma_index = FindCharInString(g_leagueResponseBuffer, ',', false);
+public bool GetResponseSuccess(int client) {
+	int comma_index = FindCharInString(g_leagueResponseBuffer[client], ',', false);
 	return comma_index != -1;
 }
 
@@ -636,8 +638,8 @@ public void ETF2LGetPlayerDataCallback(Handle hCurl, CURLcode code, any data) {
 		char curlError[256];
 		curl_easy_strerror(code, curlError, sizeof(curlError));
 	} else {
-		bool success = GetResponseSuccess();
-		if (success || GetSteamIDInCache(steamID, LEAGUE_ETF2L)) {
+		bool success = GetResponseSuccess(client);
+		if (success || GetSteamIDInCache(client, steamID, LEAGUE_ETF2L)) {
 			LeagueSuccessHelper(client, LEAGUE_ETF2L);
 		} else {
 			if (GetConVarInt(g_leaguesAllowed) & LEAGUE_RGL) {
@@ -657,7 +659,7 @@ public void SetupCurlRequest(const String:steamID[], int client, int league) {
 		return;
 	}
 
-	curl_easy_setopt_function(hCurl, CURLOPT_WRITEFUNCTION, ReceiveData);
+	curl_easy_setopt_function(hCurl, CURLOPT_WRITEFUNCTION, ReceiveData, client);
 
 	char local_leagueResolverURL[1024];
 	GetConVarString(g_leagueResolverURL, local_leagueResolverURL, sizeof(local_leagueResolverURL));
@@ -667,13 +669,14 @@ public void SetupCurlRequest(const String:steamID[], int client, int league) {
 
 	curl_easy_setopt_string(hCurl, CURLOPT_URL, local_leagueResolverURL);
 
-	strcopy(g_leagueResponseBuffer, sizeof(g_leagueResponseBuffer), "");
+	strcopy(g_leagueResponseBuffer[client], sizeof(g_leagueResponseBuffer[client]), "");
 
 	curl_easy_perform_thread(hCurl, league == LEAGUE_RGL ? RGLGetPlayerDataCallback : ETF2LGetPlayerDataCallback, client);
 }
 
-public ReceiveData(Handle handle, const String:buffer[], const bytes, const nmemb) {
-	StrCat(g_leagueResponseBuffer, sizeof(g_leagueResponseBuffer), buffer);
+public ReceiveData(Handle handle, const String:buffer[], const bytes, const nmemb, any data) {
+	int client = data;
+	StrCat(g_leagueResponseBuffer[client], sizeof(g_leagueResponseBuffer[client]), buffer);
 	return bytes * nmemb;
 }
 
@@ -682,7 +685,7 @@ public void GetETF2LUserByID(const String:steamID[], int client) {
 }
 
 // side effect of clearing g_leagueResponseBuffer
-public bool GetSteamIDInCache(const String:steamID[], int league_type) {
+public bool GetSteamIDInCache(int client, const String:steamID[], int league_type) {
 	char query[256];
 
 	Format(query, sizeof(query), "SELECT division,name,teamid FROM league_player_cache WHERE steamid='%s' AND league=%i", steamID, league_type);
@@ -692,17 +695,17 @@ public bool GetSteamIDInCache(const String:steamID[], int league_type) {
 
 	PrintToServer("Queried, steamID: %s", steamID);
 
-	if (playerDBRS == null) {
+	if (playerDBRS == null || !playerDBRS.HasResults() || playerDBRS.RowCount == 0) {
 		return false;
 	}
 
-	strcopy(g_leagueResponseBuffer, sizeof(g_leagueResponseBuffer), "");
+	strcopy(g_leagueResponseBuffer[client], sizeof(g_leagueResponseBuffer[client]), "");
 
 	char buffer[64];
 	for (int i = 0; i < 3; i++) {
 		playerDBRS.FetchString(i, buffer, sizeof(buffer));
-		StrCat(g_leagueResponseBuffer, sizeof(g_leagueResponseBuffer), buffer);
-		StrCat(g_leagueResponseBuffer, sizeof(g_leagueResponseBuffer), ",");
+		StrCat(g_leagueResponseBuffer[client], sizeof(g_leagueResponseBuffer[client]), buffer);
+		StrCat(g_leagueResponseBuffer[client], sizeof(g_leagueResponseBuffer[client]), ",");
 	}
 	return true;
 }
@@ -729,8 +732,8 @@ public void RGLGetPlayerDataCallback(Handle hCurl, CURLcode code, any data) {
 		char curlError[256];
 		curl_easy_strerror(code, curlError, sizeof(curlError));
 	} else {
-		bool success = GetResponseSuccess();
-		if (success || GetSteamIDInCache(steamID, LEAGUE_RGL)) { 
+		bool success = GetResponseSuccess(client);
+		if (success || GetSteamIDInCache(client, steamID, LEAGUE_RGL)) { 
 			LeagueSuccessHelper(client, LEAGUE_RGL);
 		} else {
 			if (GetConVarInt(g_leaguesAllowed) & LEAGUE_ETF2L) {
