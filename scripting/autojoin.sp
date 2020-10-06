@@ -80,7 +80,7 @@ StringMap playerNames;
 //StringMap playerTeams;
 
 char IntToETF2LDivision[MAX_ETF2L_DIV_INT + 1][] = {"banned", "Prem", "Division 1", "Division 2", "Division 3", "Division 4"};
-char IntToRGLDivision[MAX_RGL_DIV_INT + 1][] = {"banned", "Invite", "Division 1", "Division 2", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement"};
+char IntToRGLDivision[MAX_RGL_DIV_INT + 1][] = {"banned", "Invite", "Div-1", "Div-2", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement"};
 char KickMessages[7][] = {"You are not an RGL player in the currently whitelisted divisions",
 						 "You are not an ETF2L player in the currently whitelisted divisions",
 						 "You aren't currently in the team whitelist",
@@ -185,8 +185,8 @@ public Action Timer_DBReconnect(Handle timer) {
 // mgemod
 public SQLErrorCheckCallback(Handle owner, Handle hndl, const String:error[], any data) {
 	if (!StrEqual("", error)) {
-		PrintToServer("%s Query failed: %s", error);
-		PrintToServer("%s Retrying DB connection in %i minutes", g_dbReconnectInterval);
+		PrintToServer("%s Query failed: %s", SERVER_PRINT_PREFIX, error);
+		PrintToServer("%s Retrying DB connection in %i minutes", SERVER_PRINT_PREFIX, g_dbReconnectInterval);
 		
 		if (g_DBReconnectTimer == INVALID_HANDLE) {
 			g_DBReconnectTimer = CreateTimer(float(60 * g_dbReconnectInterval), Timer_DBReconnect, 0, TIMER_FLAG_NO_MAPCHANGE);
@@ -669,7 +669,9 @@ public void SetupCurlRequest(const String:steamID[], int client, int league) {
 
 	curl_easy_setopt_string(hCurl, CURLOPT_URL, local_leagueResolverURL);
 
-	strcopy(g_leagueResponseBuffer[client], sizeof(g_leagueResponseBuffer[]), "");
+	for (int i = 0; i < sizeof(g_leagueResponseBuffer[]); i++) {
+		g_leagueResponseBuffer[client][i] = 0;
+	}	
 
 	curl_easy_perform_thread(hCurl, league == LEAGUE_RGL ? RGLGetPlayerDataCallback : ETF2LGetPlayerDataCallback, client);
 }
@@ -699,7 +701,10 @@ public bool GetSteamIDInCache(int client, const String:steamID[], int league_typ
 		return false;
 	}
 
-	strcopy(g_leagueResponseBuffer[client], sizeof(g_leagueResponseBuffer[]), "");
+	for (int i = 0; i < sizeof(g_leagueResponseBuffer[]); i++) {
+		g_leagueResponseBuffer[client][i] = 0;
+	}
+	//strcopy(g_leagueResponseBuffer[client], sizeof(g_leagueResponseBuffer[]), "");
 
 	char buffer[64];
 	for (int i = 0; i < 3; i++) {
