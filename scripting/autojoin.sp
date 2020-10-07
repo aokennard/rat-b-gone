@@ -70,7 +70,7 @@ ConVar g_useLeagueName; // WIP
 ConVar g_dbReconnectInterval;
 
 
-char g_leagueResponseBuffer[12][1024];
+char g_leagueResponseBuffer[24][1024];
 char g_sourcemodPath[400];
 
 Handle g_DBReconnectTimer;

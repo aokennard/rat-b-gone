@@ -73,6 +73,7 @@ def get_div_teamid_from_table(table, use_most_recent_team):
     try:
         # first is a header
         rows = table.find_all("tr")[1:] 
+        #print(rows)
         # if it's green then it's active
         if use_most_recent_team or (rows[0].has_attr('style') and rows[0]['style'] == 'background-color: #B9DFCD'):
             most_recent_cols = rows[0].find_all('td')
@@ -149,7 +150,9 @@ def get_rgl_data(steamid, gamemode, use_recent_team=False):
     for league_type_tag in league_types:
         league_type_span = league_type_tag.find("span")
         if not league_type_span:
-            league_table_index += 1
+            # Ignore tag if its the probation tag
+            if league_type_tag.text != "Player is under probation":
+                league_table_index += 1
             continue
         # located a table of some gamemode
         if league_type_span['id'] and league_type_span['id'].startswith("ContentPlaceHolder1_Main_rptLeagues_lblLeagueName"):
