@@ -4,12 +4,15 @@ import requests
 
 current_sid = 0
 
+ETF2L_DIVS_LIST = ["banned", "Prem", "Division 1", "Division 2", "Division 3", "Division 4"]
 ETF2L_PLAYER_API_URL = "http://api.etf2l.org/player/{}.json"
 ETF2L_TEAM_MATCHES_API_URL = "https://api.etf2l.org/team/{}/matches.json"
 
 GAMEMODE_MAP = {'1' : 'Highlander', '2' : '6on6'}
 
-def get_etf2l_data(steamid, gamemode):
+def get_etf2l_data(parameters_dict):
+    steamid = parameters_dict.get("steamid")
+    gamemode = parameters_dict.get("gamemode")
 
     try:
         resp = requests.get(ETF2L_PLAYER_API_URL.format(steamid))
@@ -33,7 +36,9 @@ def get_etf2l_data(steamid, gamemode):
         current_time = time.time()
         for ban in bans:
             if ban["end"] > current_time:
-                return ",".join(["banned", name, "banned"])
+                if parameters_dict.get('allowbans'):
+                    return ",".join(["banned", name, "banned"])
+                return "banned player"
 
     comp_team = None
 
@@ -66,4 +71,20 @@ def get_etf2l_data(steamid, gamemode):
                 recent_competition = int(competition)
                 division = comp_team["competitions"][competition]["division"]["tier"]
 
-    return ",".join([str(division), name, str(teamid)])
+    player_data = ",".join([str(division), name, str(teamid)])
+
+    if division not in list(map(lambda x: ETF2L_DIVS_LIST[int(x)], parameters_dict.get('rgldivs').split(","))):
+        return "invalid div"
+
+    mode = int(parameters_dict.get('mode'))
+
+    if parameters_dict.get('teamid') == player_team_id:
+        return player_data
+    
+    if mode & 1 and parameters_dict.get('scrimid') == player_team_id:
+        return player_data
+
+    if mode & 2 and parameters_dict.get('matchid') == player_team_id:
+        return player_data
+
+    return "invalid player"

@@ -5,20 +5,19 @@ from flask import Flask, request
 
 app = Flask(__name__)
 
+
 @app.route('/leagueresolver')
 def resolve_steamid():
-    steamid = request.args.get('steamid')
-    gamemode = request.args.get('gamemode')
-    league = request.args.get('league')
+    leagues = int(request.args.get('leagues'))
     
-    output = "Invalid league"
+    output = ""
 
-    if league == "RGL":
-        output = rglplayerdata.get_rgl_data(steamid, gamemode, True)
-    elif league == "ETF2L":
-        output = etf2lplayerdata.get_etf2l_data(steamid, gamemode)
+    if leagues & 1:
+        output = rglplayerdata.get_rgl_data(request.args, True)
+    if ',' not in output and leagues & 2:
+        output = etf2lplayerdata.get_etf2l_data(request.args)
 
-    print("League: {}, out: {}".format(league, output))
+    print("League: {}, out: {}".format(leagues, output))
     return output
 
 
