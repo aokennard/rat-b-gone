@@ -525,39 +525,81 @@ public void PrintJoinString(const char[] name, const char[] division, int league
 	}
 }
 
-public void GetFormattedServerParameters(char steamID[STEAMID_LENGTH], char buffer[1024]) {
+public void GetFormattedServerParameters(const String:steamID[], char buffer[1024]) {
+	char temp_buffer[128];
 	StrCat(buffer, sizeof(buffer), "?steamid=");
 	StrCat(buffer, sizeof(buffer), steamID);
 
 	StrCat(buffer, sizeof(buffer), "&gamemode=");
-	StrCat(buffer, sizeof(buffer), GetConVarString(g_gamemode));
+	GetConVarString(g_gamemode, temp_buffer, sizeof(temp_buffer));
+	StrCat(buffer, sizeof(buffer), temp_buffer);
 
-	StrCat(buffer, sizeof(buffer), "&leagues=");
-	StrCat(buffer, sizeof(buffer), GetConVarString(g_leaguesAllowed));
-
-	StrCat(buffer, sizeof(buffer), "&mode=");
-	StrCat(buffer, sizeof(buffer), GetConVarString(g_serverMode));
-
-	StrCat(buffer, sizeof(buffer), "&teamid=");
-	StrCat(buffer, sizeof(buffer), GetConVarString(g_teamID));
-
-	if (GetConVarString(g_serverMode) & MODE_SCRIM) {
-		StrCat(buffer, sizeof(buffer), "&scrimid=");
-		StrCat(buffer, sizeof(buffer), GetConVarString(g_scrimID));
+	for (int i = 0; i < sizeof(temp_buffer); i++) {
+		temp_buffer[i] = 0;
 	}
 
-	if (GetConVarString(g_serverMode) & MODE_MATCH) {
+	StrCat(buffer, sizeof(buffer), "&leagues=");
+	GetConVarString(g_leaguesAllowed, temp_buffer, sizeof(temp_buffer));
+	StrCat(buffer, sizeof(buffer), temp_buffer);
+	
+	for (int i = 0; i < sizeof(temp_buffer); i++) {
+		temp_buffer[i] = 0;
+	}
+
+	StrCat(buffer, sizeof(buffer), "&mode=");
+	GetConVarString(g_serverMode, temp_buffer, sizeof(temp_buffer));
+	StrCat(buffer, sizeof(buffer), temp_buffer);
+	
+	for (int i = 0; i < sizeof(temp_buffer); i++) {
+		temp_buffer[i] = 0;
+	}
+
+	StrCat(buffer, sizeof(buffer), "&teamid=");
+	GetConVarString(g_teamID, temp_buffer, sizeof(temp_buffer));
+	StrCat(buffer, sizeof(buffer), temp_buffer);
+	
+	for (int i = 0; i < sizeof(temp_buffer); i++) {
+		temp_buffer[i] = 0;
+	}
+
+	if (GetConVarInt(g_serverMode) & MODE_SCRIM) {
+		StrCat(buffer, sizeof(buffer), "&scrimid=");
+		GetConVarString(g_scrimID, temp_buffer, sizeof(temp_buffer));
+		StrCat(buffer, sizeof(buffer), temp_buffer);
+		
+		for (int i = 0; i < sizeof(temp_buffer); i++) {
+			temp_buffer[i] = 0;
+		}
+	}
+
+	if (GetConVarInt(g_serverMode) & MODE_MATCH) {
 		StrCat(buffer, sizeof(buffer), "&matchid=");
-		StrCat(buffer, sizeof(buffer), GetConVarString(g_matchID));
+		GetConVarString(g_matchID, temp_buffer, sizeof(temp_buffer));
+		StrCat(buffer, sizeof(buffer), temp_buffer);	
+	
+		for (int i = 0; i < sizeof(temp_buffer); i++) {
+			temp_buffer[i] = 0;
+		}
 	}
 
 	if (GetConVarInt(g_leaguesAllowed) & LEAGUE_RGL) {
 		StrCat(buffer, sizeof(buffer), "&rgldivs=");
-		StrCat(buffer, sizeof(buffer), GetConVarString(g_rglDivsAllowed));
+		GetConVarString(g_rglDivsAllowed, temp_buffer, sizeof(temp_buffer));
+		StrCat(buffer, sizeof(buffer), temp_buffer);
+	
+		for (int i = 0; i < sizeof(temp_buffer); i++) {
+			temp_buffer[i] = 0;
+		}	
 	}
+
 	if (GetConVarInt(g_leaguesAllowed) & LEAGUE_ETF2L) {
 		StrCat(buffer, sizeof(buffer), "&etf2ldivs=");
-		StrCat(buffer, sizeof(buffer), GetConVarString(g_etf2lDivsAllowed));
+		GetConVarString(g_etf2lDivsAllowed, temp_buffer, sizeof(temp_buffer));
+		StrCat(buffer, sizeof(buffer), temp_buffer);
+	
+		for (int i = 0; i < sizeof(temp_buffer); i++) {
+			temp_buffer[i] = 0;
+		}
 	}
 
 	if (GetConVarBool(g_allowBannedPlayers)) {
