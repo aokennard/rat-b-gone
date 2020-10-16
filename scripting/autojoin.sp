@@ -179,6 +179,7 @@ public OnPluginStart()
 	HookConVarChange(g_useLeagueName, ConVarChangeLeagueAlias);
 	HookConVarChange(g_allowJoinOutput, ConVarChangeJoin);
 	PrintToServer("%s Competitive Player Whitelist loaded", SERVER_PRINT_PREFIX);
+	PrintToChatAll("[SM] Player whitelist version %s loaded.", PLUGIN_VERSION);
 }
 
 public Action Timer_DBReconnect(Handle timer) {
@@ -577,6 +578,10 @@ public void LeagueSuccessHelper(int client, int league) {
 	PrintJoinString(divisionNameTeamID[1], divisionNameTeamID[0], league);
 
 	SetSteamIDInCache(steamID, league, divisionNameTeamID);
+
+	for (int i = 0; i < sizeof(g_leagueResponseBuffer[]); i++) {
+		g_leagueResponseBuffer[client][i] = 0;
+	}
 
 	/* WIP 
 	char client_string[64];
