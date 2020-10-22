@@ -613,6 +613,11 @@ public void LeagueSuccessHelper(int client, int league) {
 
 	char divisionNameTeamID[3][64]; // (div, rgl_name, team id)
 	ExplodeString(g_leagueResponseBuffer[client], ",", divisionNameTeamID, 3, 64);
+	
+	if (!GetConVarBool(g_allowBannedPlayers) && strcmp(divisionNameTeamID[0], league == LEAGUE_RGL ? IntToRGLDivision[0] : IntToETF2LDivision[0]) == 0) {
+		KickClient(client, "%s league banned, banned players not allowed under current settings", league == LEAGUE_RGL ? "RGL" : "ETF2L");
+		return;
+	}
 	char steamID[STEAMID_LENGTH];
 	GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
 
@@ -646,6 +651,9 @@ public bool GetResponseSuccess(int client) {
 public void ETF2LGetPlayerDataCallback(Handle hCurl, CURLcode code, any data) {
 	int client = data;
 	char steamID[STEAMID_LENGTH];
+	if (!(0 < client <= MaxClients && IsClientInGame(client))) {
+		return;
+	} 
 	GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
 
 	if (code != CURLE_OK) {
@@ -745,6 +753,10 @@ public void SetSteamIDInCache(const String:steamID[], int league_type, char divi
 public void RGLGetPlayerDataCallback(Handle hCurl, CURLcode code, any data) {
 	int client = data;
 	char steamID[STEAMID_LENGTH];
+	if (!(0 < client <= MaxClients && IsClientInGame(client))) {
+		return;
+	} 
+	
 	GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
 
 	if (code != CURLE_OK) {
