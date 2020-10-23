@@ -73,6 +73,7 @@ def get_etf2l_data(parameters_dict):
 
     player_data = ",".join([str(division), name, str(teamid)])
 
+    print("ETF2L params: ", parameters_dict.get('rgldivs').split(","))
     if division not in list(map(lambda x: ETF2L_DIVS_LIST[int(x)], parameters_dict.get('rgldivs').split(","))):
         return "invalid div"
 
