@@ -651,9 +651,10 @@ public bool GetResponseSuccess(int client) {
 public void ETF2LGetPlayerDataCallback(Handle hCurl, CURLcode code, any data) {
 	int client = data;
 	char steamID[STEAMID_LENGTH];
-	if (!(0 < client <= MaxClients && IsClientInGame(client))) {
+	if (!(0 < client <= MaxClients && IsClientConnected(client))) {
 		return;
 	} 
+	
 	GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
 
 	if (code != CURLE_OK) {
@@ -753,7 +754,7 @@ public void SetSteamIDInCache(const String:steamID[], int league_type, char divi
 public void RGLGetPlayerDataCallback(Handle hCurl, CURLcode code, any data) {
 	int client = data;
 	char steamID[STEAMID_LENGTH];
-	if (!(0 < client <= MaxClients && IsClientInGame(client))) {
+	if (!(0 < client <= MaxClients && IsClientConnected(client))) {
 		return;
 	} 
 	
