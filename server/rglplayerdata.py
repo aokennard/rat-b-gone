@@ -185,6 +185,7 @@ def get_rgl_data(parameters_dict, use_recent_team=False):
     if division not in list(map(lambda x: RGL_DIVS_LIST[int(x)], parameters_dict.get('rgldivs').split(","))):
         return "invalid div"
 
+    print(player_data)
     mode = int(parameters_dict.get('mode'))
 
     if parameters_dict.get('teamid') == player_team_id:
@@ -194,6 +195,9 @@ def get_rgl_data(parameters_dict, use_recent_team=False):
         return player_data
 
     if mode & 2 and parameters_dict.get('matchid') == player_team_id:
+        return player_data
+
+    if mode & 4:
         return player_data
 
     return "invalid player"
