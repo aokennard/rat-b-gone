@@ -75,6 +75,7 @@ ConVar g_pugMode;
 ConVar g_leagueResolverURL;
 ConVar g_dbReconnectInterval;
 ConVar g_useLeagueName; // WIP
+ConVar g_useRingerPassword;
 ConVar g_ringerPassword;
 
 char g_leagueResponseBuffer[24][1024];
@@ -144,6 +145,7 @@ public OnPluginStart()
 	g_matchID = CreateConVar("plw_matchid", "0", "ID of match team - sometimes allowed");
 
 	g_ringerPassword = CreateConVar("plw_fakepw", DEFAULT_FAKE_PW, "The password that ringers / specs can use to join - max length of 255");
+	g_useRingerPassword = CreateConVar("plw_usefakepw", "1", "Whether the server uses the 'ringer' password for non-rostered players");
 
 	g_leagueResolverURL = CreateConVar("plw_leaguechecker_url", DEFAULT_CHECKER_URL, "The URL of a server which can resolve requests of 'steamid' to whether the player is valid");
 
@@ -807,7 +809,7 @@ public void OnClientAuthorized(int client, const char[] auth)
 	char fakePasswordBuf[MAX_PASSWORD_LENGTH + 1];
 	GetConVarString(g_ringerPassword, fakePasswordBuf, MAX_PASSWORD_LENGTH);
 
-	if (strlen(password) > 0) {
+	if (GetConVarBool(g_useRingerPassword) && strlen(password) > 0) {
 		if (strcmp(password, fakePasswordBuf, true) == 0) {
 			PrintToServer("%s Joined via password", SERVER_PRINT_PREFIX);
 			return;
