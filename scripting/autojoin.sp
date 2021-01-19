@@ -28,9 +28,9 @@ int USING_LEAGUE_CACHING = 1;
 #define STEAMID_LENGTH 32
 #define MAX_PASSWORD_LENGTH 255
 
-char MAX_DIV_CHAR[] = {'0', '9', '8'};
-char RGL_DIV_ALL[3][] = {0, "1,2,3,4,5,6,7,8,9", "1,2,3,4,5,6,7,8"};
-int MAX_RGL_DIV_INT[] = {0, 9, 8};
+char MAX_DIV_CHAR[] = {'0', '8', '7'};
+char RGL_DIV_ALL[3][] = {0, "1,2,3,4,5,6,7,8", "1,2,3,4,5,6,7"};
+int MAX_RGL_DIV_INT[] = {0, 8, 7};
 
 // idk how etf2l works now, lowest tier I saw was 4
 #define MAX_ETF2L_DIV_CHAR '5'
@@ -88,7 +88,7 @@ StringMap playerNames;
 //StringMap playerTeams;
 
 char IntToETF2LDivision[MAX_ETF2L_DIV_INT + 1][] = {"banned", "Prem", "Division 1", "Division 2", "Division 3", "Division 4"};
-char IntToRGLDivision[3][9][] = {{"none", "none", "none", "none", "none", "none", "none", "none", "none"}, {"banned", "Invite", "Challenger", "Advanced", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement"}, {"banned", "Invite", "Div-1", "Div-2", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement"}};
+char IntToRGLDivision[3][10][] = {{"none", "none", "none", "none", "none", "none", "none", "none", "none", "none"}, {"banned", "Invite", "Challenger", "Advanced", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement", "none"}, {"banned", "Invite", "Advanced", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement", "none", "none"}};
 char KickMessages[7][] = {"You are not an RGL player in the currently whitelisted divisions",
 						 "You are not an ETF2L player in the currently whitelisted divisions",
 						 "You aren't currently in the team whitelist",

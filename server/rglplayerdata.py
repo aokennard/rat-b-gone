@@ -10,7 +10,7 @@ except ImportError:
 # 1 = hl, 2 = 6v, 4 = yomps tourney
 RGL_SEARCH_LEAGUE_TABLE = {"2" : "40", "7v7" : "1", "6v6NR" : "37", "1" : "24", "4" : "54"}
 RGL_LEAGUE_STRING_ID_MAP = {"Prolander" : "7v7", "NR Sixes" : "6v6NR", "Highlander" : "1", "Trad. Sixes" : "2", "Yomps Tourney" : "4"}
-RGL_DIVS_LIST_6V = ["banned", "Invite", "Div-1", "Div-2", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement"]
+RGL_DIVS_LIST_6V = ["banned", "Invite", "Advanced", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement"]
 RGL_DIVS_LIST_HL = ["banned", "Invite", "Challenger", "Advanced", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement"]
 RGL_DIVS_LIST = [None, RGL_DIVS_LIST_HL, RGL_DIVS_LIST_6V]
 
@@ -184,7 +184,9 @@ def get_rgl_data(parameters_dict, use_recent_team=False):
         player_team_id = ""
 
     player_data = ",".join([division, name, player_team_id])
+    # print(division, RGL_DIVS_LIST[int(gamemode)], list(map(lambda x: RGL_DIVS_LIST[int(gamemode)][int(x)], parameters_dict.get('rgldivs').split(","))))
 
+    print(parameters_dict.get('rgldivs'), RGL_DIVS_LIST[int(gamemode)])
     if division not in list(map(lambda x: RGL_DIVS_LIST[int(gamemode)][int(x)], parameters_dict.get('rgldivs').split(","))):
         return "invalid div"
 
