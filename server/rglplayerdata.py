@@ -10,6 +10,7 @@ except ImportError:
 # 1 = hl, 2 = 6v, 4 = yomps tourney
 RGL_SEARCH_LEAGUE_TABLE = {"2" : "40", "7v7" : "1", "6v6NR" : "37", "1" : "24", "4" : "54"}
 RGL_LEAGUE_STRING_ID_MAP = {"Prolander" : "7v7", "NR Sixes" : "6v6NR", "Highlander" : "1", "Trad. Sixes" : "2", "Yomps Tourney" : "4"}
+RGL_DIVS_LIST = ["banned", "Invite", "Div-1", "Div-2", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement"]
 RGL_SEARCH_URL = "https://rgl.gg/Public/PlayerProfile.aspx?p={}&r={}"
 
 '''
@@ -88,8 +89,7 @@ def get_div_teamid_from_table(table, use_most_recent_team):
 
 '''
     Input:
-        a connecting users steamid
-        the gamemode we're checking for (currently only supporting 6s and HL)
+        parameters_dict: a MultiDict from Flask containing ConVar data from a server
     Output:
         a 3-tuple of (division of joining player, RGL alias, team id for gamemode we're looking for)
         alternatively: ("", RGL alias, "") when no team found
@@ -98,8 +98,10 @@ def get_div_teamid_from_table(table, use_most_recent_team):
 '''
 
 
-def get_rgl_data(steamid, gamemode, use_recent_team=False):
+def get_rgl_data(parameters_dict, use_recent_team=False):
 
+    steamid = parameters_dict.get('steamid')
+    gamemode = parameters_dict.get('gamemode')
     # get and parse the player's page
     try:
         request = requests.get(RGL_SEARCH_URL.format(steamid, RGL_SEARCH_LEAGUE_TABLE[gamemode]))
@@ -130,7 +132,9 @@ def get_rgl_data(steamid, gamemode, use_recent_team=False):
     if name == None:
         return "Name not found"
     if ban_status:
-        return ",".join(["banned", name, "banned"])
+        if parameters_dict.get('allowbans'):
+            return ",".join(["banned", name, "banned"])
+        return "banned player"
 
     # h3, hr, table is the format repeated
     league_types = div_head.find_all("h3")
@@ -140,7 +144,7 @@ def get_rgl_data(steamid, gamemode, use_recent_team=False):
         return "Unknown user profile format"
 
     division = None
-    team_id = None
+    player_team_id = None
 
     # assume league tables are contiguous, so increment for each table we see to index into list of tables 
     # I did this instead of zip incase of mismatched number of h3/tables, which can vary if someone is banned or has other stuff thats non-standard going on
@@ -164,7 +168,7 @@ def get_rgl_data(steamid, gamemode, use_recent_team=False):
             # process string to determine if correct gamemode
             if gamemode == gamemode_str:
                 league_table = league_tables[league_table_index]
-                division, team_id = get_div_teamid_from_table(league_table, use_recent_team)
+                division, player_team_id = get_div_teamid_from_table(league_table, use_recent_team)
                 break
             
             league_table_index += 1
@@ -172,9 +176,27 @@ def get_rgl_data(steamid, gamemode, use_recent_team=False):
         return "Couldn't find correct gamemode"
 
     # We found you, but no active team I guess
-    if division is None or team_id is None:
+    if division is None or player_team_id is None:
         division = ""
-        team_id = ""
-        return ",".join([division, name, team_id])
+        player_team_id = ""
+
+    player_data = ",".join([division, name, player_team_id])
+
+    if division not in list(map(lambda x: RGL_DIVS_LIST[int(x)], parameters_dict.get('rgldivs').split(","))):
+        return "invalid div"
+
+    mode = int(parameters_dict.get('mode'))
+
+    if parameters_dict.get('teamid') == player_team_id:
+        return player_data
     
-    return ",".join([division, name, team_id])
+    if mode & 1 and parameters_dict.get('scrimid') == player_team_id:
+        return player_data
+
+    if mode & 2 and parameters_dict.get('matchid') == player_team_id:
+        return player_data
+
+    if mode & 4:
+        return player_data
+
+    return "invalid player"

@@ -22,7 +22,7 @@ int USING_LEAGUE_CACHING = 1;
 #define DEFAULT_PASSWORD "pugmodepw"
 
 #define DEFAULT_CHECKER_URL "pootis.org:5000/leagueresolver"
-#define RESOLVER_URL_PARAMETER_STR "?steamid=%s&gamemode=%d&league=%s"
+#define RESOLVER_URL_PARAMETER_STR 
 
 #define MAX_NUM_CLIENTS 24
 #define STEAMID_LENGTH 32
@@ -51,24 +51,32 @@ int USING_LEAGUE_CACHING = 1;
 #define GAMEMODE_YMPS 0x4
 
 ConVar g_useWhitelist;
+
+// server-side logic
+ConVar g_gamemode;
+ConVar g_leaguesAllowed;
+// optional based on leagues allowed
 ConVar g_rglDivsAllowed;
 ConVar g_etf2lDivsAllowed;
+// allow
 ConVar g_serverMode;
+// optional based on server mode
 ConVar g_teamID;
 ConVar g_scrimID;
 ConVar g_matchID;
-ConVar g_ringerPassword;
-ConVar g_leaguesAllowed;
-ConVar g_gamemode;
+// only include if true
 ConVar g_allowBannedPlayers;
+
+// plugin-side
 ConVar g_allowChatMessages;
 ConVar g_allowKickedOutput;
 ConVar g_allowJoinOutput;
 ConVar g_pugMode;
 ConVar g_leagueResolverURL;
-ConVar g_useLeagueName; // WIP
 ConVar g_dbReconnectInterval;
-
+ConVar g_useLeagueName; // WIP
+ConVar g_useRingerPassword;
+ConVar g_ringerPassword;
 
 char g_leagueResponseBuffer[24][1024];
 char g_sourcemodPath[400];
@@ -137,6 +145,7 @@ public OnPluginStart()
 	g_matchID = CreateConVar("plw_matchid", "0", "ID of match team - sometimes allowed");
 
 	g_ringerPassword = CreateConVar("plw_fakepw", DEFAULT_FAKE_PW, "The password that ringers / specs can use to join - max length of 255");
+	g_useRingerPassword = CreateConVar("plw_usefakepw", "1", "Whether the server uses the 'ringer' password for non-rostered players");
 
 	g_leagueResolverURL = CreateConVar("plw_leaguechecker_url", DEFAULT_CHECKER_URL, "The URL of a server which can resolve requests of 'steamid' to whether the player is valid");
 
@@ -172,6 +181,7 @@ public OnPluginStart()
 	HookConVarChange(g_useLeagueName, ConVarChangeLeagueAlias);
 	HookConVarChange(g_allowJoinOutput, ConVarChangeJoin);
 	PrintToServer("%s Competitive Player Whitelist loaded", SERVER_PRINT_PREFIX);
+	PrintToChatAll("[SM] Player whitelist version %s loaded.", PLUGIN_VERSION);
 }
 
 public Action Timer_DBReconnect(Handle timer) {
@@ -416,8 +426,7 @@ public void ConVarChangeLeagues(ConVar cvar, const char[] oldvalue, const char[]
 	if (GetConVarBool(g_allowChatMessages))
 		PrintToChatAll("[SM]: Checking %s league mode", 
 								int_newvalue == LEAGUE_RGL ? "RGL" : 
-								int_newvalue == LEAGUE_ETF2L ? "ETF2L" : 
-								int_newvalue == LEAGUE_ALL ? "RGL or ETF2L" : "unknown");
+								int_newvalue == LEAGUE_ETF2L ? "ETF2L" : "RGL or ETF2L");
 
 }
 
@@ -519,97 +528,108 @@ public void PrintJoinString(const char[] name, const char[] division, int league
 	}
 }
 
-public int DivisionToInt(char div_string[64], int league_type) {
-	return league_type == LEAGUE_RGL ? RGLDivisionToInt(div_string) : ETF2LDivisionToInt(div_string);
-}
+public void GetFormattedServerParameters(const String:steamID[], char buffer[1024]) {
+	char temp_buffer[128];
+	StrCat(buffer, sizeof(buffer), "?steamid=");
+	StrCat(buffer, sizeof(buffer), steamID);
 
-public int ETF2LDivisionToInt(char tier[64]) {
-	for (int i = 0; i < MAX_ETF2L_DIV_INT; i++) {
-		if (strncmp(tier, IntToETF2LDivision[i], strlen(IntToETF2LDivision[i]), false) == 0) {
-			return i;
+	StrCat(buffer, sizeof(buffer), "&gamemode=");
+	GetConVarString(g_gamemode, temp_buffer, sizeof(temp_buffer));
+	StrCat(buffer, sizeof(buffer), temp_buffer);
+
+	for (int i = 0; i < sizeof(temp_buffer); i++) {
+		temp_buffer[i] = 0;
+	}
+
+	StrCat(buffer, sizeof(buffer), "&leagues=");
+	GetConVarString(g_leaguesAllowed, temp_buffer, sizeof(temp_buffer));
+	StrCat(buffer, sizeof(buffer), temp_buffer);
+	
+	for (int i = 0; i < sizeof(temp_buffer); i++) {
+		temp_buffer[i] = 0;
+	}
+
+	StrCat(buffer, sizeof(buffer), "&mode=");
+	GetConVarString(g_serverMode, temp_buffer, sizeof(temp_buffer));
+	StrCat(buffer, sizeof(buffer), temp_buffer);
+	
+	for (int i = 0; i < sizeof(temp_buffer); i++) {
+		temp_buffer[i] = 0;
+	}
+
+	StrCat(buffer, sizeof(buffer), "&teamid=");
+	GetConVarString(g_teamID, temp_buffer, sizeof(temp_buffer));
+	StrCat(buffer, sizeof(buffer), temp_buffer);
+	
+	for (int i = 0; i < sizeof(temp_buffer); i++) {
+		temp_buffer[i] = 0;
+	}
+
+	if (GetConVarInt(g_serverMode) & MODE_SCRIM) {
+		StrCat(buffer, sizeof(buffer), "&scrimid=");
+		GetConVarString(g_scrimID, temp_buffer, sizeof(temp_buffer));
+		StrCat(buffer, sizeof(buffer), temp_buffer);
+		
+		for (int i = 0; i < sizeof(temp_buffer); i++) {
+			temp_buffer[i] = 0;
 		}
 	}
-	return -1;
-}
 
-public int RGLDivisionToInt(char div[64]) {
-	for (int i = 0; i < MAX_RGL_DIV_INT; i++) {
-		if (strncmp(div, IntToRGLDivision[i], strlen(IntToRGLDivision[i]), false) == 0) {
-			return i;
+	if (GetConVarInt(g_serverMode) & MODE_MATCH) {
+		StrCat(buffer, sizeof(buffer), "&matchid=");
+		GetConVarString(g_matchID, temp_buffer, sizeof(temp_buffer));
+		StrCat(buffer, sizeof(buffer), temp_buffer);	
+	
+		for (int i = 0; i < sizeof(temp_buffer); i++) {
+			temp_buffer[i] = 0;
 		}
 	}
-	return -1;
+
+	if (GetConVarInt(g_leaguesAllowed) & LEAGUE_RGL) {
+		StrCat(buffer, sizeof(buffer), "&rgldivs=");
+		GetConVarString(g_rglDivsAllowed, temp_buffer, sizeof(temp_buffer));
+		StrCat(buffer, sizeof(buffer), temp_buffer);
+	
+		for (int i = 0; i < sizeof(temp_buffer); i++) {
+			temp_buffer[i] = 0;
+		}	
+	}
+
+	if (GetConVarInt(g_leaguesAllowed) & LEAGUE_ETF2L) {
+		StrCat(buffer, sizeof(buffer), "&etf2ldivs=");
+		GetConVarString(g_etf2lDivsAllowed, temp_buffer, sizeof(temp_buffer));
+		StrCat(buffer, sizeof(buffer), temp_buffer);
+	
+		for (int i = 0; i < sizeof(temp_buffer); i++) {
+			temp_buffer[i] = 0;
+		}
+	}
+
+	if (GetConVarBool(g_allowBannedPlayers)) {
+		StrCat(buffer, sizeof(buffer), "&allowbans=1");
+	}
 }
 
 public void LeagueSuccessHelper(int client, int league) {
-	
+	// In this branch, if we get to this point, they're in the appropriate divs / teams / etc
+
 	char divisionNameTeamID[3][64]; // (div, rgl_name, team id)
 	ExplodeString(g_leagueResponseBuffer[client], ",", divisionNameTeamID, 3, 64);
+	
+	if (!GetConVarBool(g_allowBannedPlayers) && strcmp(divisionNameTeamID[0], league == LEAGUE_RGL ? IntToRGLDivision[0] : IntToETF2LDivision[0]) == 0) {
+		KickClient(client, "%s league banned, banned players not allowed under current settings", league == LEAGUE_RGL ? "RGL" : "ETF2L");
+		return;
+	}
 	char steamID[STEAMID_LENGTH];
 	GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
 
 	PrintToServer("%s div: %s name: %s teamid: %s", SERVER_PRINT_PREFIX, divisionNameTeamID[0], divisionNameTeamID[1], divisionNameTeamID[2]);
-	int div = DivisionToInt(divisionNameTeamID[0], league);
-	
-	// Invalid / unknown div
-	if (div == -1) {
-		PrintToServer("%s Unexpected tier, check up on it - likely not on a team", SERVER_PRINT_PREFIX);
-		strcopy(divisionNameTeamID[0], 6, "No div");
-		strcopy(divisionNameTeamID[2], 2, "-1");
-	}
-	
-	// Banned player
-	if (div == 0 && GetConVarBool(g_allowBannedPlayers)) {
-		if (GetConVarBool(g_allowChatMessages))
-			PrintToChatAll("Player %s (%s league banned) is joining", divisionNameTeamID[1], league == LEAGUE_RGL ? "RGL" : "ETF2L");
-		SetSteamIDInCache(steamID, league, divisionNameTeamID);
-		return;
-	}
-
-	char allowed_divs[64];
-	char div_string[64];
-	GetConVarString(league == LEAGUE_RGL ? g_rglDivsAllowed : g_etf2lDivsAllowed, allowed_divs, sizeof(allowed_divs));
-	IntToString(div, div_string, sizeof(div_string));
-	
-	// Not in the allowed divisions
-	if (StrContains(allowed_divs, div_string, false) == -1) {
-		if (GetConVarBool(g_allowKickedOutput) && GetConVarBool(g_allowChatMessages))
-        	PrintToChatAll("%s player %s tried to join", league == LEAGUE_RGL ? "RGL" : "ETF2L", divisionNameTeamID[1]);
-		// If we allow all leagues and are currently checking RGL, don't kick yet - otherwise, do kick
-		if (!(GetConVarInt(g_leaguesAllowed) == LEAGUE_ALL && league == LEAGUE_RGL))
-			KickClient(client, "You are not a %s player in the currently whitelisted divisions", GetConVarInt(g_leaguesAllowed) == LEAGUE_ALL ? "RGL/ETF2L" : GetConVarInt(g_leaguesAllowed) == LEAGUE_RGL ? "RGL" : "ETF2L");
-		// If they only failed RGL check, still do ETF2L
-		else if (GetConVarInt(g_leaguesAllowed) == LEAGUE_ALL && league == LEAGUE_RGL) {
-			GetETF2LUserByID(steamID, client);
-		}	
-		// cache here?
-		return;
-	}
+	PrintJoinString(divisionNameTeamID[1], divisionNameTeamID[0], league);
 
 	SetSteamIDInCache(steamID, league, divisionNameTeamID);
 
-	// Validate they below to team / scrim / match ID, based on the mode.
-	if (MODE_TEAMONLY & GetConVarInt(g_serverMode)) {
-		if (StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_teamID)) {
-   			PrintJoinString(divisionNameTeamID[1], divisionNameTeamID[0], league);
-		} else {
-			if (GetConVarBool(g_allowKickedOutput) && GetConVarBool(g_allowChatMessages))
-				PrintToChatAll("%s player %s tried to join", league == LEAGUE_RGL ? "RGL" : "ETF2L", divisionNameTeamID[1]);
-			KickClient(client, "You aren't currently in the team whitelist");
-		}
-	} else if (MODE_ALL & GetConVarInt(g_serverMode)) {
-		PrintJoinString(divisionNameTeamID[1], divisionNameTeamID[0], league);
-	} else if (MODE_SCRIM & GetConVarInt(g_serverMode) && (StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_scrimID) || 
-														   StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_teamID))) {
-		PrintJoinString(divisionNameTeamID[1], divisionNameTeamID[0], league);
-	} else if (MODE_MATCH & GetConVarInt(g_serverMode) && (StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_matchID) || 
-														   StringToInt(divisionNameTeamID[2]) == GetConVarInt(g_teamID))) {
-		PrintJoinString(divisionNameTeamID[1], divisionNameTeamID[0], league);
-	} else {
-		// deny all here
-		if (GetConVarBool(g_allowKickedOutput) && GetConVarBool(g_allowChatMessages))
-			PrintToChatAll("%s player %s tried to join", league == LEAGUE_RGL ? "RGL" : "ETF2L", divisionNameTeamID[1]);	
-		KickClient(client, "You don't fit the current server's whitelist rules");
+	for (int i = 0; i < sizeof(g_leagueResponseBuffer[]); i++) {
+		g_leagueResponseBuffer[client][i] = 0;
 	}
 
 	/* WIP 
@@ -626,12 +646,17 @@ public void LeagueSuccessHelper(int client, int league) {
 // we define 'success' as commas in the response as <div>,<name>,<teamid> is seen as success
 public bool GetResponseSuccess(int client) {
 	int comma_index = FindCharInString(g_leagueResponseBuffer[client], ',', false);
+	PrintToServer("%s client resp buffer: %s", SERVER_PRINT_PREFIX, g_leagueResponseBuffer[client]);
 	return comma_index != -1;
 }
 
 public void ETF2LGetPlayerDataCallback(Handle hCurl, CURLcode code, any data) {
 	int client = data;
 	char steamID[STEAMID_LENGTH];
+	if (!(0 < client <= MaxClients && IsClientConnected(client))) {
+		return;
+	} 
+	
 	GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
 
 	if (code != CURLE_OK) {
@@ -661,10 +686,10 @@ public void SetupCurlRequest(const String:steamID[], int client, int league) {
 
 	curl_easy_setopt_function(hCurl, CURLOPT_WRITEFUNCTION, ReceiveData, client);
 
-	char local_leagueResolverURL[1024];
+	char local_leagueResolverURL[2048];
 	GetConVarString(g_leagueResolverURL, local_leagueResolverURL, sizeof(local_leagueResolverURL));
-	char temp_buffer[512];
-	Format(temp_buffer, sizeof(temp_buffer), RESOLVER_URL_PARAMETER_STR, steamID, GetConVarInt(g_gamemode), league == LEAGUE_RGL ? "RGL" : "ETF2L");
+	char temp_buffer[1024];
+	GetFormattedServerParameters(steamID, temp_buffer);
 	StrCat(local_leagueResolverURL, sizeof(local_leagueResolverURL), temp_buffer);
 
 	curl_easy_setopt_string(hCurl, CURLOPT_URL, local_leagueResolverURL);
@@ -731,6 +756,10 @@ public void SetSteamIDInCache(const String:steamID[], int league_type, char divi
 public void RGLGetPlayerDataCallback(Handle hCurl, CURLcode code, any data) {
 	int client = data;
 	char steamID[STEAMID_LENGTH];
+	if (!(0 < client <= MaxClients && IsClientConnected(client))) {
+		return;
+	} 
+	
 	GetClientAuthId(client, AuthId_SteamID64, steamID, STEAMID_LENGTH);
 
 	if (code != CURLE_OK) {
@@ -780,7 +809,7 @@ public void OnClientAuthorized(int client, const char[] auth)
 	char fakePasswordBuf[MAX_PASSWORD_LENGTH + 1];
 	GetConVarString(g_ringerPassword, fakePasswordBuf, MAX_PASSWORD_LENGTH);
 
-	if (strlen(password) > 0) {
+	if (GetConVarBool(g_useRingerPassword) && strlen(password) > 0) {
 		if (strcmp(password, fakePasswordBuf, true) == 0) {
 			PrintToServer("%s Joined via password", SERVER_PRINT_PREFIX);
 			return;
