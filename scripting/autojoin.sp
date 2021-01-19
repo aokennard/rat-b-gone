@@ -28,9 +28,9 @@ int USING_LEAGUE_CACHING = 1;
 #define STEAMID_LENGTH 32
 #define MAX_PASSWORD_LENGTH 255
 
-#define MAX_DIV_CHAR '8'
-#define MAX_RGL_DIV_INT 8
-#define RGL_DIV_ALL "1,2,3,4,5,6,7,8"
+const char MAX_DIV_CHAR[3] = {'0', '9', '8'};
+const char RGL_DIV_ALL[3][] = {0, "1,2,3,4,5,6,7,8,9", "1,2,3,4,5,6,7,8"}
+const int MAX_RGL_DIV_INT[3] = {0, 9, 8};
 
 // idk how etf2l works now, lowest tier I saw was 4
 #define MAX_ETF2L_DIV_CHAR '5'
@@ -88,7 +88,8 @@ StringMap playerNames;
 //StringMap playerTeams;
 
 char IntToETF2LDivision[MAX_ETF2L_DIV_INT + 1][] = {"banned", "Prem", "Division 1", "Division 2", "Division 3", "Division 4"};
-char IntToRGLDivision[MAX_RGL_DIV_INT + 1][] = {"banned", "Invite", "Div-1", "Div-2", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement"};
+char IntToRGLDivision[3][MAX_RGL_DIV_INT + 1][] = {0, {"banned", "Invite", "Challenger", "Advanced", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement"},
+{"banned", "Invite", "Div-1", "Div-2", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement"}};
 char KickMessages[7][] = {"You are not an RGL player in the currently whitelisted divisions",
 						 "You are not an ETF2L player in the currently whitelisted divisions",
 						 "You aren't currently in the team whitelist",
@@ -130,7 +131,7 @@ public OnPluginStart()
 	IntToString(LEAGUE_ALL, macro_int_buf, sizeof(macro_int_buf));
 	g_leaguesAllowed = CreateConVar("plw_leagues", macro_int_buf, "The leagues to check potential joiners may be in (or operator); 1 = RGL, 2 = ETF2L");
 
-	g_rglDivsAllowed = CreateConVar("plw_divs_rgl", RGL_DIV_ALL, "Allowed division players (comma separated): 1 = invite, 2 = div1, 3 = div2, 4 = main, 5 = intermediate, 6 = amateur, 7 = newcomer");
+	g_rglDivsAllowed = CreateConVar("plw_divs_rgl", RGL_DIV_ALL[GAMEMODE_6S], "Allowed division players (comma separated): 1 = invite, 2 = div1, 3 = div2, 4 = main, 5 = intermediate, 6 = amateur, 7 = newcomer");
 	
 	g_etf2lDivsAllowed = CreateConVar("plw_divs_etf2l", ETF2L_DIV_ALL, "Allowed division players (comma separated): 1 = prem, 2 = div1, 3 = div2, 4 = div3, 5 = div4");
 
@@ -431,29 +432,30 @@ public void ConVarChangeLeagues(ConVar cvar, const char[] oldvalue, const char[]
 }
 
 public void ConVarChangeDivs(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
+	int gamemode = GetConVarInt(g_gamemode);
 	if (strcmp(oldvalue, newvalue, true) != 0) {
 		// error checking
 		for (int i = 0; i < strlen(newvalue); i++) {
 			if (newvalue[i] == ',') 
 				continue;
-			if (newvalue[i] > MAX_DIV_CHAR || newvalue[i] <= '0') {
+			if (newvalue[i] > MAX_DIV_CHAR[gamemode] || newvalue[i] <= '0') {
 				if (GetConVarBool(g_allowChatMessages))
 					PrintToChatAll("[SM]: Unknown div sequence, resetting to default all divs");
-				SetConVarString(cvar, cvar == g_rglDivsAllowed ? RGL_DIV_ALL : ETF2L_DIV_ALL);
+				SetConVarString(cvar, cvar == g_rglDivsAllowed ? RGL_DIV_ALL[gamemode] : ETF2L_DIV_ALL);
 				return;
 			}
 			
 		}
 		if (GetConVarBool(g_allowChatMessages))
 			PrintToChatAll("[SM]: Whitelisted RGL divs:");
-		char split_buffer[MAX_RGL_DIV_INT][64];
-		int n_divs = ExplodeString(newvalue, ",", split_buffer, MAX_RGL_DIV_INT, 64, false);
+		char split_buffer[MAX_RGL_DIV_INT[gamemode]][64];
+		int n_divs = ExplodeString(newvalue, ",", split_buffer, MAX_RGL_DIV_INT[gamemode], 64, false);
 		for (int i = 0; i < n_divs; i++) {
 			if (strlen(split_buffer[i]) != 1) 
 				continue;
 			if (GetConVarBool(g_allowChatMessages))
 				PrintToChatAll("[SM]: %s", cvar == g_rglDivsAllowed ? 
-										IntToRGLDivision[(split_buffer[i][0] - '0')]:
+										IntToRGLDivision[gamemode][(split_buffer[i][0] - '0')]:
 										IntToETF2LDivision[(split_buffer[i][0] - '0')]);
 		}
 	}
@@ -615,8 +617,9 @@ public void LeagueSuccessHelper(int client, int league) {
 
 	char divisionNameTeamID[3][64]; // (div, rgl_name, team id)
 	ExplodeString(g_leagueResponseBuffer[client], ",", divisionNameTeamID, 3, 64);
+	int gamemode = GetConVarInt(g_gamemode);
 	
-	if (!GetConVarBool(g_allowBannedPlayers) && strcmp(divisionNameTeamID[0], league == LEAGUE_RGL ? IntToRGLDivision[0] : IntToETF2LDivision[0]) == 0) {
+	if (!GetConVarBool(g_allowBannedPlayers) && strcmp(divisionNameTeamID[0], league == LEAGUE_RGL ? IntToRGLDivision[gamemode][0] : IntToETF2LDivision[0]) == 0) {
 		KickClient(client, "%s league banned, banned players not allowed under current settings", league == LEAGUE_RGL ? "RGL" : "ETF2L");
 		return;
 	}
