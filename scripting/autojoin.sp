@@ -28,7 +28,7 @@ int USING_LEAGUE_CACHING = 1;
 #define STEAMID_LENGTH 32
 #define MAX_PASSWORD_LENGTH 255
 
-char MAX_DIV_CHAR[] = {'0', '8', '7'};
+char MAX_DIV_CHAR = '8';
 char RGL_DIV_ALL[3][] = {0, "1,2,3,4,5,6,7,8", "1,2,3,4,5,6,7"};
 int MAX_RGL_DIV_INT[] = {0, 8, 7};
 
@@ -408,8 +408,11 @@ public void ConVarChangeGamemode(ConVar cvar, const char[] oldvalue, const char[
 	if (int_newvalue == int_oldvalue) {
 		return;
 	}
-	if (GetConVarBool(g_allowChatMessages))
+	if (GetConVarBool(g_allowChatMessages)) {
 		PrintToChatAll("[SM]: %s based whitelist", int_newvalue == GAMEMODE_HL ? "HL" : int_newvalue == GAMEMODE_6S ? "6s" : "Yomps tourney");
+		int gamemode = GetConVarInt(g_gamemode);
+		SetConVarString(g_rglDivsAllowed, RGL_DIV_ALL[gamemode]);
+	}
 }
 
 public void ConVarChangeLeagues(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
@@ -437,7 +440,7 @@ public void ConVarChangeDivs(ConVar cvar, const char[] oldvalue, const char[] ne
 		for (int i = 0; i < strlen(newvalue); i++) {
 			if (newvalue[i] == ',') 
 				continue;
-			if (newvalue[i] > MAX_DIV_CHAR[gamemode] || newvalue[i] <= '0') {
+			if (newvalue[i] > MAX_DIV_CHAR || newvalue[i] <= '0') {
 				if (GetConVarBool(g_allowChatMessages))
 					PrintToChatAll("[SM]: Unknown div sequence, resetting to default all divs");
 				SetConVarString(cvar, cvar == g_rglDivsAllowed ? RGL_DIV_ALL[gamemode] : ETF2L_DIV_ALL);
