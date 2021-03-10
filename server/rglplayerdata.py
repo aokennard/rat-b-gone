@@ -102,7 +102,7 @@ def get_div_teamid_from_table(table, use_most_recent_team):
 
 
 def get_rgl_data(parameters_dict, use_recent_team=False):
-    parameters_dict = {'steamid':'76561198039891603', 'gamemode':'2', 'leagues':'3', 'mode':'4', 'teamid':'8199', 'matchid':'8158', 'rgldivs':'1,2,3,4,5,6,7'}
+
     steamid = parameters_dict.get('steamid')
     gamemode = parameters_dict.get('gamemode')
     # get and parse the player's page
