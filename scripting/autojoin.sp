@@ -28,9 +28,9 @@ int USING_LEAGUE_CACHING = 1;
 #define STEAMID_LENGTH 32
 #define MAX_PASSWORD_LENGTH 255
 
-const char MAX_DIV_CHAR[3] = {'0', '9', '8'};
-const char RGL_DIV_ALL[3][] = {0, "1,2,3,4,5,6,7,8,9", "1,2,3,4,5,6,7,8"}
-const int MAX_RGL_DIV_INT[3] = {0, 9, 8};
+char MAX_DIV_CHAR = '8';
+char RGL_DIV_ALL[3][] = {0, "1,2,3,4,5,6,7,8", "1,2,3,4,5,6,7"};
+int MAX_RGL_DIV_INT[] = {0, 8, 7};
 
 // idk how etf2l works now, lowest tier I saw was 4
 #define MAX_ETF2L_DIV_CHAR '5'
@@ -88,8 +88,7 @@ StringMap playerNames;
 //StringMap playerTeams;
 
 char IntToETF2LDivision[MAX_ETF2L_DIV_INT + 1][] = {"banned", "Prem", "Division 1", "Division 2", "Division 3", "Division 4"};
-char IntToRGLDivision[3][MAX_RGL_DIV_INT + 1][] = {0, {"banned", "Invite", "Challenger", "Advanced", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement"},
-{"banned", "Invite", "Div-1", "Div-2", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement"}};
+char IntToRGLDivision[3][10][] = {{"none", "none", "none", "none", "none", "none", "none", "none", "none", "none"}, {"banned", "Invite", "Challenger", "Advanced", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement", "none"}, {"banned", "Invite", "Advanced", "Main", "Intermediate", "Amateur", "Newcomer", "Admin Placement", "none", "none"}};
 char KickMessages[7][] = {"You are not an RGL player in the currently whitelisted divisions",
 						 "You are not an ETF2L player in the currently whitelisted divisions",
 						 "You aren't currently in the team whitelist",
@@ -409,8 +408,11 @@ public void ConVarChangeGamemode(ConVar cvar, const char[] oldvalue, const char[
 	if (int_newvalue == int_oldvalue) {
 		return;
 	}
-	if (GetConVarBool(g_allowChatMessages))
+	if (GetConVarBool(g_allowChatMessages)) {
 		PrintToChatAll("[SM]: %s based whitelist", int_newvalue == GAMEMODE_HL ? "HL" : int_newvalue == GAMEMODE_6S ? "6s" : "Yomps tourney");
+		int gamemode = GetConVarInt(g_gamemode);
+		SetConVarString(g_rglDivsAllowed, RGL_DIV_ALL[gamemode]);
+	}
 }
 
 public void ConVarChangeLeagues(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
@@ -438,7 +440,7 @@ public void ConVarChangeDivs(ConVar cvar, const char[] oldvalue, const char[] ne
 		for (int i = 0; i < strlen(newvalue); i++) {
 			if (newvalue[i] == ',') 
 				continue;
-			if (newvalue[i] > MAX_DIV_CHAR[gamemode] || newvalue[i] <= '0') {
+			if (newvalue[i] > MAX_DIV_CHAR || newvalue[i] <= '0') {
 				if (GetConVarBool(g_allowChatMessages))
 					PrintToChatAll("[SM]: Unknown div sequence, resetting to default all divs");
 				SetConVarString(cvar, cvar == g_rglDivsAllowed ? RGL_DIV_ALL[gamemode] : ETF2L_DIV_ALL);
@@ -448,7 +450,7 @@ public void ConVarChangeDivs(ConVar cvar, const char[] oldvalue, const char[] ne
 		}
 		if (GetConVarBool(g_allowChatMessages))
 			PrintToChatAll("[SM]: Whitelisted RGL divs:");
-		char split_buffer[MAX_RGL_DIV_INT[gamemode]][64];
+		char split_buffer[24][64];
 		int n_divs = ExplodeString(newvalue, ",", split_buffer, MAX_RGL_DIV_INT[gamemode], 64, false);
 		for (int i = 0; i < n_divs; i++) {
 			if (strlen(split_buffer[i]) != 1) 

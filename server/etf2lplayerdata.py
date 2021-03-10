@@ -64,13 +64,17 @@ def get_etf2l_data(parameters_dict):
     recent_competition = -1
     division = None
 
-    # TODO more testing, I'm sure this is KeyError galore 
-    for competition in comp_team["competitions"]:
-        if comp_team["competitions"][competition]["division"]["tier"] is not None:
-            if int(competition) > recent_competition:
-                recent_competition = int(competition)
-                division = comp_team["competitions"][competition]["division"]["tier"]
-
+    # TODO more testing, I'm sure this is KeyError galore
+    try: 
+    	for competition in comp_team["competitions"]:
+            if comp_team["competitions"][competition]["division"]["tier"] is not None:
+                if int(competition) > recent_competition:
+                    recent_competition = int(competition)
+                    division = comp_team["competitions"][competition]["division"]["tier"]
+    except Exception as e:
+        print(e)
+        return "Competition error"
+ 
     player_data = ",".join([str(division), name, str(teamid)])
 
     if division not in list(map(lambda x: ETF2L_DIVS_LIST[int(x)], parameters_dict.get('etf2ldivs').split(","))):
