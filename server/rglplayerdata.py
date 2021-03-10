@@ -102,14 +102,14 @@ def get_div_teamid_from_table(table, use_most_recent_team):
 
 
 def get_rgl_data(parameters_dict, use_recent_team=False):
-
+    parameters_dict = {'steamid':'76561198039891603', 'gamemode':'2', 'leagues':'3', 'mode':'4', 'teamid':'8199', 'matchid':'8158', 'rgldivs':'1,2,3,4,5,6,7'}
     steamid = parameters_dict.get('steamid')
     gamemode = parameters_dict.get('gamemode')
     # get and parse the player's page
     try:
         request = requests.get(RGL_SEARCH_URL.format(steamid, RGL_SEARCH_LEAGUE_TABLE[gamemode]))
-    except Exception:
-        return "requests exception"
+    except Exception as e:
+        return "requests exception " + e
     if not request or request.status_code != 200:
         return "request failure"
 
@@ -186,22 +186,21 @@ def get_rgl_data(parameters_dict, use_recent_team=False):
     player_data = ",".join([division, name, player_team_id])
     # print(division, RGL_DIVS_LIST[int(gamemode)], list(map(lambda x: RGL_DIVS_LIST[int(gamemode)][int(x)], parameters_dict.get('rgldivs').split(","))))
 
-    print(parameters_dict.get('rgldivs'), RGL_DIVS_LIST[int(gamemode)])
     if division not in list(map(lambda x: RGL_DIVS_LIST[int(gamemode)][int(x)], parameters_dict.get('rgldivs').split(","))):
         return "invalid div"
 
     mode = int(parameters_dict.get('mode'))
 
-    if parameters_dict.get('teamid') == player_team_id:
-        return player_data
-    
-    if mode & 1 and parameters_dict.get('scrimid') == player_team_id:
+    if mode & 4:
         return player_data
 
     if mode & 2 and parameters_dict.get('matchid') == player_team_id:
         return player_data
 
-    if mode & 4:
+    if mode & 1 and parameters_dict.get('scrimid') == player_team_id:
+        return player_data
+
+    if parameters_dict.get('teamid') == player_team_id:
         return player_data
 
     return "invalid player"
